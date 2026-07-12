@@ -1,0 +1,61 @@
+# Penuel's Mac Portfolio
+
+An Astro + React portfolio that behaves like Penuel Stanley-Zebulon's personal Mac desktop.
+
+## Included in this starter
+
+- Custom Penuel bear wallpaper
+- macOS-style menu bar and live desktop clock
+- Single-click folder selection and double-click opening
+- Boot screen and typed welcome message
+- Draggable, resizable, minimizable, maximizable, stackable windows
+- Window restoration through the menu bar (no dock)
+- Custom desktop right-click menu
+- Curated daily Bible-verse rotation
+- About Me window with delayed portrait reveal
+- Finder-style Projects window
+- Large in-desktop project detail window; no route change
+- Experience, Leadership, Awards, and Certifications tabs
+- Resume preview and PDF download
+- GitHub and LinkedIn preview windows
+- Responsive mobile fallback
+- Silent interaction design
+
+## Start locally
+
+```bash
+npm install
+npm run dev
+```
+
+Open the local URL Astro prints in the terminal.
+
+## Production check
+
+```bash
+npm run build
+npm run preview
+```
+
+## Personal links
+
+- GitHub: https://github.com/iampenuel
+- LinkedIn: https://www.linkedin.com/in/penuel-stanley-zebulon/
+
+## Important verse note
+
+The starter uses brief excerpts and references for the requested NIV rotation. Replace the text in `src/data/verses.ts` with full wording only when you have the right to publish that translation text on the deployed site.
+
+## Main editing files
+
+- `src/components/PortfolioDesktop.tsx` — desktop, windows, and interactions
+- `src/styles/global.css` — all visual styling and responsive behavior
+- `src/data/projects.ts` — project folders and project detail content
+- `src/data/experience.ts` — experience, leadership, awards, and certifications
+- `src/data/verses.ts` — curated verse rotation
+- `public/assets/` — wallpaper, portraits, logos, and visual references
+- `public/resume/` — resume PDF
+
+## Deployment
+
+This is a static Astro project and can be deployed to Vercel, Netlify, Cloudflare Pages, or GitHub Pages after updating `site` in `astro.config.mjs`.
