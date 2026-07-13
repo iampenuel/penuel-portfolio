@@ -4,5 +4,5 @@ import react from '@astrojs/react';
 export default defineConfig({
   integrations: [react()],
   output: 'static',
-  site: 'https://penuel-portfolio-rho.vercel.app'
+  site: 'https://iampenuel.vercel.app'
 });
