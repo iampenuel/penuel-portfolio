@@ -5,6 +5,8 @@ import { verseForDate } from '../data/verses';
 
 type WindowId = 'intro' | 'about' | 'projects' | 'project-detail' | 'experience' | 'resume' | 'github' | 'linkedin';
 
+const ESV_COPYRIGHT_NOTICE = 'Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. ESV Text Edition: 2025. The ESV text may not be quoted in any publication made available to the public by a Creative Commons license. The ESV may not be translated in whole or in part into any other language. Used by permission. All rights reserved.';
+
 type WindowState = {
   id: WindowId;
   title: string;
@@ -491,6 +493,9 @@ export default function PortfolioDesktop() {
   });
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [windowMenuOpen, setWindowMenuOpen] = useState(false);
+  const [scriptureAttributionOpen, setScriptureAttributionOpen] = useState(false);
+  const scriptureAttributionDialogRef = useRef<HTMLDialogElement>(null);
+  const scriptureAttributionTriggerRef = useRef<HTMLButtonElement>(null);
   const now = useClock();
   const reducedMotion = useReducedMotion();
 
@@ -502,6 +507,13 @@ export default function PortfolioDesktop() {
     const timer = window.setTimeout(() => setBooting(false), 1350);
     return () => window.clearTimeout(timer);
   }, [reducedMotion]);
+
+  useEffect(() => {
+    const dialog = scriptureAttributionDialogRef.current;
+    if (!dialog) return;
+    if (scriptureAttributionOpen && !dialog.open) dialog.showModal();
+    if (!scriptureAttributionOpen && dialog.open) dialog.close();
+  }, [scriptureAttributionOpen]);
 
   const verse = useMemo(() => verseForDate(now), [now]);
   const activeWindow = useMemo(() => Object.values(windows).filter((item) => item.open && !item.minimized).sort((a, b) => b.z - a.z)[0]?.id, [windows]);
@@ -598,11 +610,58 @@ export default function PortfolioDesktop() {
           />
         ))}
 
-        <button className="verse-widget" onClick={(event) => event.stopPropagation()} aria-label={`Verse of the day: ${verse.reference}`} suppressHydrationWarning>
+        <aside className="verse-widget" onClick={(event) => event.stopPropagation()} aria-label={`Verse of the day: ${verse.reference}`} suppressHydrationWarning>
           <div className="verse-top"><span className="sun-glyph">☀</span><div><small>VERSE OF THE DAY</small><strong suppressHydrationWarning>{verse.reference} · {verse.translation}</strong></div></div>
           <p suppressHydrationWarning>{verse.excerpt}</p>
-          <span className="verse-note">Curated daily rotation</span>
-        </button>
+          <div className="verse-footer">
+            <span className="verse-note">Curated daily rotation</span>
+            <button
+              ref={scriptureAttributionTriggerRef}
+              className="verse-attribution-trigger"
+              type="button"
+              aria-haspopup="dialog"
+              aria-controls="esv-scripture-attribution"
+              onClick={() => setScriptureAttributionOpen(true)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  setScriptureAttributionOpen(true);
+                }
+              }}
+            >
+              ESV Scripture attribution
+            </button>
+          </div>
+        </aside>
+
+        <dialog
+          ref={scriptureAttributionDialogRef}
+          id="esv-scripture-attribution"
+          className="esv-attribution-dialog"
+          aria-labelledby="esv-attribution-title"
+          onCancel={(event) => {
+            event.preventDefault();
+            setScriptureAttributionOpen(false);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              setScriptureAttributionOpen(false);
+            }
+          }}
+          onClose={() => {
+            setScriptureAttributionOpen(false);
+            scriptureAttributionTriggerRef.current?.focus();
+          }}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="esv-attribution-panel">
+            <span className="eyebrow">SCRIPTURE ATTRIBUTION</span>
+            <h2 id="esv-attribution-title">English Standard Version</h2>
+            <p>{ESV_COPYRIGHT_NOTICE}</p>
+            <button className="secondary-button compact" type="button" autoFocus onClick={() => setScriptureAttributionOpen(false)}>Close</button>
+          </div>
+        </dialog>
 
         {windows.about.open && !windows.about.minimized && (
           <>

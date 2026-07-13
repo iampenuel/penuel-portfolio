@@ -44,7 +44,7 @@ npm run preview
 
 ## Important verse note
 
-The starter uses brief excerpts and references for the requested NIV rotation. Replace the text in `src/data/verses.ts` with full wording only when you have the right to publish that translation text on the deployed site.
+The curated rotation uses five ESV references with the required Crossway digital copyright notice available through the verse widget’s “ESV Scripture attribution” control.
 
 ## Main editing files
 

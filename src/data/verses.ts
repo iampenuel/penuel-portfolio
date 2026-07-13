@@ -1,7 +1,7 @@
 export type Verse = {
   reference: string;
   excerpt: string;
-  translation: 'NIV';
+  translation: 'ESV';
 };
 
 // The rotation is deterministic by local calendar day and contains only Penuel's
@@ -9,28 +9,28 @@ export type Verse = {
 export const verses: Verse[] = [
   {
     reference: 'John 3:16',
-    excerpt: 'For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.',
-    translation: 'NIV'
+    excerpt: 'For God so loved the world, that he gave his only Son, that whoever believes in him should not perish but have eternal life.',
+    translation: 'ESV'
   },
   {
     reference: 'Romans 8:28',
-    excerpt: 'And we know that in all things God works for the good of those who love him, who have been called according to his purpose.',
-    translation: 'NIV'
+    excerpt: 'And we know that for those who love God all things work together for good, for those who are called according to his purpose.',
+    translation: 'ESV'
   },
   {
     reference: 'Romans 5:8',
-    excerpt: 'But God demonstrates his own love for us in this: While we were still sinners, Christ died for us.',
-    translation: 'NIV'
+    excerpt: 'but God shows his love for us in that while we were still sinners, Christ died for us.',
+    translation: 'ESV'
   },
   {
     reference: '1 John 4:19',
     excerpt: 'We love because he first loved us.',
-    translation: 'NIV'
+    translation: 'ESV'
   },
   {
     reference: '1 John 4:16',
-    excerpt: 'And so we know and rely on the love God has for us. God is love. Whoever lives in love lives in God, and God in them.',
-    translation: 'NIV'
+    excerpt: 'So we have come to know and to believe the love that God has for us. God is love, and whoever abides in love abides in God, and God abides in him.',
+    translation: 'ESV'
   }
 ];
 

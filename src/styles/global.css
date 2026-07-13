@@ -171,6 +171,38 @@ a { color: inherit; }
   text-wrap: pretty;
 }
 .verse-note { color: #7a7a80; font-size: 10px; font-weight: 600; }
+.verse-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.verse-attribution-trigger {
+  padding: 1px 0;
+  color: #66666c;
+  background: transparent;
+  border: 0;
+  font-size: 10px;
+  font-weight: 650;
+  text-decoration: underline;
+  text-decoration-color: rgba(102,102,108,.48);
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.verse-attribution-trigger:hover { color: #303034; }
+.verse-attribution-trigger:focus-visible { outline: 2px solid #0a84ff; outline-offset: 3px; border-radius: 2px; }
+
+.esv-attribution-dialog {
+  width: min(540px, calc(100vw - 32px));
+  max-width: none;
+  max-height: calc(100dvh - 48px);
+  padding: 0;
+  overflow: auto;
+  color: #f5f5f7;
+  background: rgba(28,28,30,.98);
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 16px;
+  box-shadow: 0 30px 110px rgba(0,0,0,.72);
+}
+.esv-attribution-dialog::backdrop { background: rgba(0,0,0,.62); backdrop-filter: blur(8px); }
+.esv-attribution-panel { padding: 26px; }
+.esv-attribution-panel h2 { margin: 7px 0 14px; font-size: 25px; letter-spacing: -.035em; }
+.esv-attribution-panel p { margin: 0 0 22px; color: #d0d0d6; font-size: 14px; line-height: 1.62; overflow-wrap: anywhere; }
 
 .mac-window {
   position: fixed;
@@ -424,6 +456,8 @@ a { color: inherit; }
   }
   .desktop-area { padding: 24px 14px 150px; display: grid; grid-template-columns: repeat(3, minmax(84px, 1fr)); align-content: start; gap: 12px; }
   .verse-widget { position: relative; top: auto; right: auto; width: auto; grid-column: 1 / -1; grid-row: 1; margin-bottom: 12px; }
+  .verse-footer { align-items: flex-end; }
+  .esv-attribution-panel { padding: 22px; }
   .desktop-icon { grid-row: auto; }
   .mac-window, .mac-window.maximized {
     position: fixed !important;
