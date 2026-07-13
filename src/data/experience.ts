@@ -78,6 +78,7 @@ export const leadership = [
     organization: 'InterVarsity Christian Fellowship — Penn State Harrisburg',
     role: 'Bible Study Leader and Outreach Team Lead',
     dates: 'March 2024 – Present',
+    logo: '/assets/logos/intervarsity.png',
     description:
       'Lead Bible-study discussions, coordinate outreach, welcome new students, and support a faith-centered community built around belonging, reflection, and service.'
   }
@@ -89,6 +90,7 @@ export const awards = [
     issuer: 'Penn State Harrisburg',
     date: 'May 2026',
     amount: '$1,500',
+    logo: '/assets/logos/penn-state.png',
     description:
       'Awarded in recognition of health-focused AI work and used to support neonatal brain MRI developmental-age classification research using transfer learning and Grad-CAM.'
   }
@@ -99,46 +101,55 @@ export const certifications = [
     title: 'SAP Certified – SAP Generative AI Developer',
     issuer: 'SAP',
     date: 'July 2026',
+    logo: '/assets/logos/sap.png',
     description: 'System-based SAP Generative AI Developer certification; earned with a 100% assessment score.'
   },
   {
     title: 'Introducing Joule Studio',
     issuer: 'SAP',
-    date: 'July 2026'
+    date: 'July 2026',
+    logo: '/assets/logos/sap.png'
   },
   {
     title: 'Social and Behavioral Human Subjects Research (IRB) Course',
     issuer: 'CITI Program',
-    date: 'June 2026'
+    date: 'June 2026',
+    logo: '/assets/logos/citi.png'
   },
   {
     title: 'Workers as Research Subjects – A Vulnerable Population',
     issuer: 'CITI Program',
-    date: 'June 2026'
+    date: 'June 2026',
+    logo: '/assets/logos/citi.png'
   },
   {
     title: 'AWS AI Practitioner',
     issuer: 'Udacity',
-    date: 'May 2026'
+    date: 'May 2026',
+    logo: '/assets/logos/udacity.png'
   },
   {
     title: 'The Rise of Multiagent Systems',
     issuer: 'IBM',
-    date: 'March 2026'
+    date: 'March 2026',
+    logo: '/assets/logos/ibm.png'
   },
   {
     title: 'Introduction to Retrieval-Augmented Generation',
     issuer: 'IBM',
-    date: 'March 2026'
+    date: 'March 2026',
+    logo: '/assets/logos/ibm.png'
   },
   {
     title: 'Responsible AI: Applying AI Principles with Google Cloud',
     issuer: 'Google',
-    date: 'July 2025'
+    date: 'July 2025',
+    logo: '/assets/logos/google.png'
   },
   {
     title: 'Databricks Accredited Generative AI Fundamentals',
     issuer: 'Databricks',
-    date: 'May 2025'
+    date: 'May 2025',
+    logo: '/assets/logos/databricks.png'
   }
 ];

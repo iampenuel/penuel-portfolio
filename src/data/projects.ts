@@ -10,6 +10,7 @@ export type Project = {
   technologies: string[];
   boundaries: string[];
   repository: string;
+  image?: string;
   liveDemo?: string;
   folderGroup: 'AI Agents' | 'Data Engineering' | 'Medical Imaging' | 'Biosignals' | 'Healthcare Workflow';
 };
@@ -46,6 +47,7 @@ export const projects: Project[] = [
       'Not an EHR, medical device, clinician replacement, or clinically validated product'
     ],
     repository: 'https://github.com/iampenuel/sema',
+    image: '/assets/sema.png',
     liveDemo: 'https://sema-delta.vercel.app',
     folderGroup: 'AI Agents'
   },
@@ -105,6 +107,7 @@ export const projects: Project[] = [
       'Red flags are general escalation language, not autonomous triage'
     ],
     repository: 'https://github.com/iampenuel/alethia-live',
+    image: '/assets/alethia-live.png',
     liveDemo: 'https://alethia-live-695463819079.us-central1.run.app',
     folderGroup: 'AI Agents'
   },
@@ -132,6 +135,7 @@ export const projects: Project[] = [
       'Prototype with curated or synthetic facility metadata; no clinical validation'
     ],
     repository: 'https://github.com/iampenuel/mamathemba',
+    image: '/assets/mamathemba.png',
     liveDemo: 'https://mamathemba.vercel.app',
     folderGroup: 'Healthcare Workflow'
   },

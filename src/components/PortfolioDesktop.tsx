@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { projects, type Project } from '../data/projects';
 import { awards, certifications, experience, leadership } from '../data/experience';
-import { verses } from '../data/verses';
+import { verseForDate } from '../data/verses';
 
 type WindowId = 'intro' | 'about' | 'projects' | 'project-detail' | 'experience' | 'resume' | 'github' | 'linkedin';
 
@@ -35,7 +35,7 @@ const DESKTOP_ITEMS: DesktopItem[] = [
 ];
 
 const WINDOW_DEFAULTS: Record<WindowId, Omit<WindowState, 'z'>> = {
-  intro: { id: 'intro', title: 'Welcome', open: true, minimized: false, maximized: false, x: 450, y: 170, width: 610, height: 390 },
+  intro: { id: 'intro', title: 'Welcome', open: true, minimized: false, maximized: false, x: 450, y: 150, width: 610, height: 460 },
   about: { id: 'about', title: 'About Me', open: false, minimized: false, maximized: false, x: 420, y: 110, width: 780, height: 590 },
   projects: { id: 'projects', title: 'Projects', open: false, minimized: false, maximized: true, x: 20, y: 40, width: 1180, height: 760 },
   'project-detail': { id: 'project-detail', title: 'Project', open: false, minimized: false, maximized: false, x: 260, y: 58, width: 1080, height: 720 },
@@ -49,25 +49,53 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
-function dayOfYear(date: Date) {
-  const start = Date.UTC(date.getUTCFullYear(), 0, 0);
-  const diff = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) - start;
-  return Math.floor(diff / 86_400_000);
-}
-
 function useClock() {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 30_000);
-    return () => window.clearInterval(timer);
+    let timer = 0;
+    const syncToLocalMinute = () => {
+      window.clearTimeout(timer);
+      const current = new Date();
+      setNow(current);
+      const millisecondsIntoMinute = current.getSeconds() * 1_000 + current.getMilliseconds();
+      timer = window.setTimeout(syncToLocalMinute, 60_025 - millisecondsIntoMinute);
+    };
+    const syncWhenVisible = () => {
+      if (!document.hidden) syncToLocalMinute();
+    };
+
+    syncToLocalMinute();
+    window.addEventListener('focus', syncToLocalMinute);
+    document.addEventListener('visibilitychange', syncWhenVisible);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('focus', syncToLocalMinute);
+      document.removeEventListener('visibilitychange', syncWhenVisible);
+    };
   }, []);
   return now;
 }
 
-function useTyping(text: string, enabled: boolean, speed = 28) {
+function useReducedMotion() {
+  const [reducedMotion, setReducedMotion] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updatePreference = () => setReducedMotion(media.matches);
+    updatePreference();
+    media.addEventListener('change', updatePreference);
+    return () => media.removeEventListener('change', updatePreference);
+  }, []);
+  return reducedMotion;
+}
+
+function useTyping(text: string, enabled: boolean, reducedMotion: boolean, speed = 28) {
   const [typed, setTyped] = useState('');
   useEffect(() => {
     if (!enabled) return;
+    if (reducedMotion) {
+      setTyped(text);
+      return;
+    }
     setTyped('');
     let i = 0;
     const timer = window.setInterval(() => {
@@ -76,16 +104,16 @@ function useTyping(text: string, enabled: boolean, speed = 28) {
       if (i >= text.length) window.clearInterval(timer);
     }, speed);
     return () => window.clearInterval(timer);
-  }, [text, enabled, speed]);
+  }, [text, enabled, reducedMotion, speed]);
   return typed;
 }
 
-function TrafficLights({ onClose, onMinimize, onMaximize }: { onClose: () => void; onMinimize: () => void; onMaximize: () => void }) {
+function TrafficLights({ maximized, onClose, onMinimize, onMaximize }: { maximized: boolean; onClose: () => void; onMinimize: () => void; onMaximize: () => void }) {
   return (
     <div className="traffic-lights" aria-label="Window controls">
       <button className="traffic red" aria-label="Close window" onClick={onClose} />
       <button className="traffic yellow" aria-label="Minimize window" onClick={onMinimize} />
-      <button className="traffic green" aria-label="Maximize window" onClick={onMaximize} />
+      <button className="traffic green" aria-label={maximized ? 'Restore window' : 'Maximize window'} onClick={onMaximize} />
     </div>
   );
 }
@@ -151,9 +179,17 @@ function MacWindow({
     onResize(width, height);
   };
 
+  const fittedWidth = `min(${state.width}px, calc(100vw - 16px))`;
+  const fittedHeight = `min(${state.height}px, calc(100vh - 46px))`;
   const style = state.maximized
     ? { left: 8, top: 38, width: 'calc(100vw - 16px)', height: 'calc(100vh - 46px)', zIndex: state.z }
-    : { left: state.x, top: state.y, width: state.width, height: state.height, zIndex: state.z };
+    : {
+        left: `clamp(8px, ${state.x}px, calc(100vw - ${fittedWidth} - 8px))`,
+        top: `clamp(38px, ${state.y}px, calc(100vh - ${fittedHeight} - 8px))`,
+        width: fittedWidth,
+        height: fittedHeight,
+        zIndex: state.z
+      };
 
   return (
     <section
@@ -164,7 +200,7 @@ function MacWindow({
       onPointerDown={onFocus}
     >
       <header className="window-titlebar" onPointerDown={beginDrag} onPointerMove={drag} onPointerUp={endDrag} onPointerCancel={endDrag}>
-        <TrafficLights onClose={onClose} onMinimize={onMinimize} onMaximize={onMaximize} />
+        <TrafficLights maximized={state.maximized} onClose={onClose} onMinimize={onMinimize} onMaximize={onMaximize} />
         <strong>{state.title}</strong>
         <span className="titlebar-spacer" />
       </header>
@@ -199,9 +235,9 @@ function DesktopIcon({ item, selected, onSelect, onOpen }: { item: DesktopItem; 
   );
 }
 
-function IntroWindow({ ready, onEnter }: { ready: boolean; onEnter: () => void }) {
-  const copy = "Hey, I’m Penuel. I build human-centered AI systems for healthcare — tools that help people prepare, understand, and communicate without taking judgment away from humans.";
-  const typed = useTyping(copy, ready, 19);
+function IntroWindow({ ready, reducedMotion, onEnter }: { ready: boolean; reducedMotion: boolean; onEnter: () => void }) {
+  const copy = 'Welcome to my desktop. I’m Penuel (pronounced “peh-new-ehl”). I build thoughtful AI and digital products that make hard things clearer and more human. My work often centers on human-centered AI, product design, and healthcare—but I’m drawn to any problem where technology can help without losing sight of people.';
+  const typed = useTyping(copy, ready, reducedMotion, 19);
   return (
     <div className="intro-content">
       <span className="eyebrow">WELCOME TO MY DESKTOP</span>
@@ -218,15 +254,15 @@ function AboutWindow() {
     <div className="about-layout">
       <div className="about-copy">
         <span className="eyebrow">ABOUT ME</span>
-        <h2>I build AI systems around people, not around demos.</h2>
+        <h2>Builder. Learner. Problem solver.</h2>
         <p>
-          I’m Penuel Stanley-Zebulon, an Artificial Intelligence Methods and Applications student at Penn State Harrisburg and an international student from Nigeria. My work sits at the intersection of healthcare AI, responsible product engineering, machine learning, and human-centered design.
+          My path began in Electrical Engineering, where I learned to see systems as connected parts with real consequences. Curiosity led me toward artificial intelligence and a question that still guides me: how can technology make difficult experiences clearer without taking people out of the process?
         </p>
         <p>
-          I’m especially interested in AI agents, multimodal interfaces, healthcare data systems, medical imaging, and biosignal modeling. Across every project, I care about clear safety boundaries, reviewable outputs, and complete workflows where the model supports human judgment instead of replacing it.
+          My Christian faith grounds that work in love, service, and human dignity. It is why I build human-centered AI that respects judgment, communicates its limits, and serves rather than replaces. Much of that focus lives in healthcare AI, across patient communication, maternal referral workflows, medical imaging, biosignals, and healthcare data.
         </p>
         <p>
-          Outside engineering, I create accessible educational media at Penn State and lead Bible-study and outreach initiatives through InterVarsity.
+          Outside engineering, I find rhythm in music, playing piano, long runs, faith, and time with the people I care about.
         </p>
         <div className="about-actions">
           <a className="primary-button compact" href="mailto:stanleyzebulonp@gmail.com">Email me</a>
@@ -235,9 +271,9 @@ function AboutWindow() {
         </div>
       </div>
       <div className="about-gallery" aria-label="Photos of Penuel">
-        <img className="about-main-photo" src="/assets/photos/formal-closeup.webp" alt="Penuel wearing glasses and formal attire" />
+        <img className="about-main-photo" src="/assets/photos/event-portrait.webp" alt="Penuel standing in a black cap and cardigan" />
         <div className="photo-strip">
-          <img src="/assets/photos/event-fun.webp" alt="Penuel at an event" />
+          <img src="/assets/photos/formal-event.jpg" alt="Penuel wearing formal attire at an evening event" />
           <img src="/assets/photos/thumbs-up.webp" alt="Penuel giving a thumbs up" />
         </div>
       </div>
@@ -247,19 +283,37 @@ function AboutWindow() {
 
 function ProjectsWindow({ onOpenProject }: { onOpenProject: (project: Project) => void }) {
   const [selected, setSelected] = useState<string | null>(null);
-  const [group, setGroup] = useState<'All Projects' | Project['folderGroup']>('All Projects');
   const [query, setQuery] = useState('');
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const groups: Array<'All Projects' | Project['folderGroup']> = ['All Projects', 'AI Agents', 'Data Engineering', 'Healthcare Workflow', 'Medical Imaging', 'Biosignals'];
+  const [navigation, setNavigation] = useState<{ history: Array<'All Projects' | Project['folderGroup']>; index: number }>({
+    history: ['All Projects'],
+    index: 0
+  });
+  const group = navigation.history[navigation.index];
   const visible = projects.filter((project) => {
     const matchesGroup = group === 'All Projects' || project.folderGroup === group;
     const haystack = `${project.name} ${project.category} ${project.tagline}`.toLowerCase();
     return matchesGroup && haystack.includes(query.toLowerCase());
   });
+  const selectedVisibleProject = visible.find((item) => item.id === selected);
 
   const openSelected = () => {
-    const project = projects.find((item) => item.id === selected);
-    if (project) onOpenProject(project);
+    if (selectedVisibleProject) onOpenProject(selectedVisibleProject);
+  };
+
+  const chooseGroup = (nextGroup: 'All Projects' | Project['folderGroup']) => {
+    setNavigation((current) => {
+      if (current.history[current.index] === nextGroup) return current;
+      const history = [...current.history.slice(0, current.index + 1), nextGroup];
+      return { history, index: history.length - 1 };
+    });
+    setSelected(null);
+  };
+
+  const navigateHistory = (direction: -1 | 1) => {
+    setNavigation((current) => ({ ...current, index: current.index + direction }));
+    setSelected(null);
   };
 
   return (
@@ -267,23 +321,32 @@ function ProjectsWindow({ onOpenProject }: { onOpenProject: (project: Project) =
       <aside className="finder-sidebar">
         <div className="sidebar-heading">Favorites</div>
         {groups.map((item) => (
-          <button className={group === item ? 'active' : ''} key={item} onClick={() => setGroup(item)}>
+          <button className={group === item ? 'active' : ''} key={item} onClick={() => chooseGroup(item)}>
             <span className="sidebar-glyph">◆</span>{item}
           </button>
         ))}
       </aside>
       <main className="finder-main">
         <div className="finder-toolbar">
-          <div className="toolbar-nav" aria-hidden="true"><span>‹</span><span>›</span></div>
+          <div className="toolbar-nav" aria-label="Project navigation">
+            <button aria-label="Back" disabled={navigation.index === 0} onClick={() => navigateHistory(-1)}>‹</button>
+            <button aria-label="Forward" disabled={navigation.index === navigation.history.length - 1} onClick={() => navigateHistory(1)}>›</button>
+          </div>
           <h2>{group}</h2>
           <div className="finder-spacer" />
           <div className="view-toggle" aria-label="Project view">
-            <button className={view === 'grid' ? 'active' : ''} onClick={() => setView('grid')}>▦</button>
-            <button className={view === 'list' ? 'active' : ''} onClick={() => setView('list')}>☷</button>
+            <button aria-label="Grid view" className={view === 'grid' ? 'active' : ''} onClick={() => setView('grid')}>▦</button>
+            <button aria-label="List view" className={view === 'list' ? 'active' : ''} onClick={() => setView('list')}>☷</button>
           </div>
           <label className="finder-search"><span>⌕</span><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search" /></label>
-          <button className="open-button" disabled={!selected} onClick={openSelected}>Open</button>
+          <button className="open-button" disabled={!selectedVisibleProject} onClick={openSelected}>Open</button>
         </div>
+        <label className="mobile-project-filter">
+          <span>Filter projects</span>
+          <select value={group} onChange={(event) => chooseGroup(event.target.value as 'All Projects' | Project['folderGroup'])}>
+            {groups.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+        </label>
         <div className={`project-browser ${view}`} onClick={() => setSelected(null)}>
           {visible.map((project) => (
             <button
@@ -315,7 +378,7 @@ function ProjectDetailWindow({ project }: { project: Project | null }) {
           <h2>{project.name}</h2>
           <p className="project-tagline">{project.tagline}</p>
         </div>
-        <img src="/assets/folder.png" alt="" />
+        <img src={project.image ?? '/assets/folder.png'} alt="" />
       </header>
       <div className="project-columns">
         <div className="project-story">
@@ -364,16 +427,19 @@ function ExperienceWindow() {
           </div>
         )}
         {tab === 'Leadership' && leadership.map((item) => (
-          <article className="simple-card" key={item.organization}><span>{item.dates}</span><h3>{item.role}</h3><h4>{item.organization}</h4><p>{item.description}</p></article>
+          <article className="simple-card leadership-card" key={item.organization}>
+            <img className="section-logo" src={item.logo} alt="InterVarsity logo" />
+            <div><span>{item.dates}</span><h3>{item.role}</h3><h4>{item.organization}</h4><p>{item.description}</p></div>
+          </article>
         ))}
         {tab === 'Awards' && awards.map((item) => (
-          <article className="award-card" key={item.title}><div className="award-amount">{item.amount}</div><div><span>{item.date}</span><h3>{item.title}</h3><h4>{item.issuer}</h4><p>{item.description}</p></div></article>
+          <article className="award-card" key={item.title}><div className="award-logo"><img src={item.logo} alt="Penn State logo" /></div><div><span>{item.date} · {item.amount}</span><h3>{item.title}</h3><h4>{item.issuer}</h4><p>{item.description}</p></div></article>
         ))}
         {tab === 'Certifications' && (
           <div className="cert-grid">
             {certifications.map((item, index) => (
               <article className={`cert-card ${index === 0 ? 'featured' : ''}`} key={item.title}>
-                <div className="cert-icon">{item.issuer.slice(0, 2).toUpperCase()}</div>
+                <div className="cert-logo"><img src={item.logo} alt={`${item.issuer} logo`} /></div>
                 <div><span>{item.date}</span><h3>{item.title}</h3><h4>{item.issuer}</h4>{item.description && <p>{item.description}</p>}</div>
               </article>
             ))}
@@ -402,7 +468,7 @@ function SocialProfile({ kind }: { kind: 'github' | 'linkedin' }) {
   const isGitHub = kind === 'github';
   return (
     <div className="social-profile">
-      <img src="/assets/photos/formal-closeup.webp" alt="Penuel Stanley-Zebulon" />
+      <img src={isGitHub ? '/assets/github-profile.png' : '/assets/photos/formal-closeup.webp'} alt="Penuel Stanley-Zebulon" />
       <div className="social-copy">
         <span className="eyebrow">{isGitHub ? 'GITHUB PROFILE' : 'LINKEDIN PROFILE'}</span>
         <h2>Penuel Stanley-Zebulon</h2>
@@ -426,13 +492,18 @@ export default function PortfolioDesktop() {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [windowMenuOpen, setWindowMenuOpen] = useState(false);
   const now = useClock();
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
+    if (reducedMotion) {
+      setBooting(false);
+      return;
+    }
     const timer = window.setTimeout(() => setBooting(false), 1350);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [reducedMotion]);
 
-  const verse = useMemo(() => verses[dayOfYear(now) % verses.length], [now]);
+  const verse = useMemo(() => verseForDate(now), [now]);
   const activeWindow = useMemo(() => Object.values(windows).filter((item) => item.open && !item.minimized).sort((a, b) => b.z - a.z)[0]?.id, [windows]);
 
   const updateWindow = (id: WindowId, patch: Partial<WindowState>) => {
@@ -453,6 +524,7 @@ export default function PortfolioDesktop() {
       [id]: { ...current[id], open: true, minimized: false, z: next, maximized: id === 'projects' ? true : current[id].maximized }
     }));
     setSelectedIcon(id);
+    setContextMenu(null);
     setWindowMenuOpen(false);
   };
 
@@ -485,7 +557,7 @@ export default function PortfolioDesktop() {
   return (
     <main className="desktop" onClick={() => { setSelectedIcon(null); setContextMenu(null); setWindowMenuOpen(false); }} onContextMenu={handleContextMenu}>
       <div className={`boot-screen ${booting ? 'visible' : ''}`} aria-hidden={!booting}>
-        <div className="boot-mark">PSZ</div>
+        <div className="boot-mark"><img src="/assets/github-profile.png" alt="" /></div>
         <div className="boot-progress"><span /></div>
       </div>
 
@@ -499,8 +571,8 @@ export default function PortfolioDesktop() {
         </div>
         <div className="menu-right">
           <span aria-label="Silent mode">◖</span>
-          <span>{new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).format(now)}</span>
-          <span>{new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(now)}</span>
+          <span suppressHydrationWarning>{new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).format(now)}</span>
+          <span suppressHydrationWarning>{new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(now)}</span>
         </div>
         {windowMenuOpen && (
           <div className="window-menu" onClick={(event) => event.stopPropagation()}>
@@ -517,20 +589,37 @@ export default function PortfolioDesktop() {
 
       <section className="desktop-area" aria-label="Penuel's portfolio desktop">
         {DESKTOP_ITEMS.map((item) => (
-          <DesktopIcon key={item.id} item={item} selected={selectedIcon === item.id} onSelect={() => setSelectedIcon(item.id)} onOpen={() => openWindow(item.id)} />
+          <DesktopIcon
+            key={item.id}
+            item={item}
+            selected={selectedIcon === item.id}
+            onSelect={() => { setSelectedIcon(item.id); setContextMenu(null); setWindowMenuOpen(false); }}
+            onOpen={() => openWindow(item.id)}
+          />
         ))}
 
-        <button className="verse-widget" onClick={(event) => event.stopPropagation()} aria-label={`Verse of the day: ${verse.reference}`}>
-          <div className="verse-top"><span className="sun-glyph">☀</span><div><small>VERSE OF THE DAY</small><strong>{verse.reference} · {verse.translation}</strong></div></div>
-          <p>{verse.excerpt}</p>
+        <button className="verse-widget" onClick={(event) => event.stopPropagation()} aria-label={`Verse of the day: ${verse.reference}`} suppressHydrationWarning>
+          <div className="verse-top"><span className="sun-glyph">☀</span><div><small>VERSE OF THE DAY</small><strong suppressHydrationWarning>{verse.reference} · {verse.translation}</strong></div></div>
+          <p suppressHydrationWarning>{verse.excerpt}</p>
           <span className="verse-note">Curated daily rotation</span>
         </button>
 
         {windows.about.open && !windows.about.minimized && (
-          <div className="about-portrait-reveal" style={{ zIndex: Math.max(18, windows.about.z - 1) }}>
-            <img src="/assets/photos/formal-full.webp" alt="Penuel standing with arms crossed" />
-            <span>Building with purpose.</span>
-          </div>
+          <>
+            <div className="about-portrait-reveal" style={{ zIndex: Math.max(18, windows.about.z - 1) }}>
+              <img src="/assets/photos/formal-full.webp" alt="Penuel standing with arms crossed" />
+              <span>Building with purpose.</span>
+            </div>
+            <div
+              className="about-photo-float-right"
+              style={{
+                left: `clamp(8px, ${windows.about.x + windows.about.width - 40}px, calc(100vw - 206px))`,
+                zIndex: windows.about.z + 1
+              }}
+            >
+              <img src="/assets/photos/event-fun.webp" alt="Penuel enjoying an event" />
+            </div>
+          </>
         )}
 
         {(Object.keys(windows) as WindowId[]).map((id) => (
@@ -545,7 +634,7 @@ export default function PortfolioDesktop() {
             onMove={(x, y) => updateWindow(id, { x, y })}
             onResize={(width, height) => updateWindow(id, { width, height })}
           >
-            {id === 'intro' && <IntroWindow ready={!booting} onEnter={() => closeWindow('intro')} />}
+            {id === 'intro' && <IntroWindow ready={!booting} reducedMotion={reducedMotion} onEnter={() => closeWindow('intro')} />}
             {id === 'about' && <AboutWindow />}
             {id === 'projects' && <ProjectsWindow onOpenProject={openProject} />}
             {id === 'project-detail' && <ProjectDetailWindow project={selectedProject} />}
@@ -566,6 +655,10 @@ export default function PortfolioDesktop() {
             <button onClick={resetDesktop}>Reset Desktop</button>
           </div>
         )}
+
+        <p className="copyright-signature" suppressHydrationWarning>
+          © {new Date().getFullYear()} | PENUEL STANLEY-ZEBULON
+        </p>
       </section>
     </main>
   );
