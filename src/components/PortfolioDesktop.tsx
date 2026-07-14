@@ -51,27 +51,37 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
+function isSameLocalMinute(first: Date, second: Date) {
+  return first.getFullYear() === second.getFullYear()
+    && first.getMonth() === second.getMonth()
+    && first.getDate() === second.getDate()
+    && first.getHours() === second.getHours()
+    && first.getMinutes() === second.getMinutes()
+    && first.getTimezoneOffset() === second.getTimezoneOffset();
+}
+
 function useClock() {
-  const [now, setNow] = useState(() => new Date());
+  const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
-    let timer = 0;
-    const syncToLocalMinute = () => {
-      window.clearTimeout(timer);
-      const current = new Date();
-      setNow(current);
-      const millisecondsIntoMinute = current.getSeconds() * 1_000 + current.getMilliseconds();
-      timer = window.setTimeout(syncToLocalMinute, 60_025 - millisecondsIntoMinute);
+    const syncNow = () => {
+      const next = new Date();
+      setNow((current) => current && isSameLocalMinute(current, next) ? current : next);
     };
     const syncWhenVisible = () => {
-      if (!document.hidden) syncToLocalMinute();
+      if (!document.hidden) syncNow();
     };
 
-    syncToLocalMinute();
-    window.addEventListener('focus', syncToLocalMinute);
+    syncNow();
+    const timer = window.setInterval(syncNow, 1_000);
+    window.addEventListener('focus', syncNow);
+    window.addEventListener('pageshow', syncNow);
+    window.addEventListener('online', syncNow);
     document.addEventListener('visibilitychange', syncWhenVisible);
     return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener('focus', syncToLocalMinute);
+      window.clearInterval(timer);
+      window.removeEventListener('focus', syncNow);
+      window.removeEventListener('pageshow', syncNow);
+      window.removeEventListener('online', syncNow);
       document.removeEventListener('visibilitychange', syncWhenVisible);
     };
   }, []);
@@ -515,7 +525,7 @@ export default function PortfolioDesktop() {
     if (!scriptureAttributionOpen && dialog.open) dialog.close();
   }, [scriptureAttributionOpen]);
 
-  const verse = useMemo(() => verseForDate(now), [now]);
+  const verse = useMemo(() => now ? verseForDate(now) : null, [now]);
   const activeWindow = useMemo(() => Object.values(windows).filter((item) => item.open && !item.minimized).sort((a, b) => b.z - a.z)[0]?.id, [windows]);
 
   const updateWindow = (id: WindowId, patch: Partial<WindowState>) => {
@@ -583,8 +593,8 @@ export default function PortfolioDesktop() {
         </div>
         <div className="menu-right">
           <span aria-label="Silent mode">◖</span>
-          <span suppressHydrationWarning>{new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).format(now)}</span>
-          <span suppressHydrationWarning>{new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(now)}</span>
+          <span>{now ? new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).format(now) : '—'}</span>
+          <span>{now ? new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(now) : '—'}</span>
         </div>
         {windowMenuOpen && (
           <div className="window-menu" onClick={(event) => event.stopPropagation()}>
@@ -610,9 +620,9 @@ export default function PortfolioDesktop() {
           />
         ))}
 
-        <aside className="verse-widget" onClick={(event) => event.stopPropagation()} aria-label={`Verse of the day: ${verse.reference}`} suppressHydrationWarning>
-          <div className="verse-top"><span className="sun-glyph">☀</span><div><small>VERSE OF THE DAY</small><strong suppressHydrationWarning>{verse.reference} · {verse.translation}</strong></div></div>
-          <p suppressHydrationWarning>{verse.excerpt}</p>
+        <aside className="verse-widget" onClick={(event) => event.stopPropagation()} aria-label={verse ? `Verse of the day: ${verse.reference}` : 'Verse of the day'} aria-busy={!verse}>
+          <div className="verse-top"><span className="sun-glyph">☀</span><div><small>VERSE OF THE DAY</small><strong>{verse ? `${verse.reference} · ${verse.translation}` : '—'}</strong></div></div>
+          <p>{verse?.excerpt ?? ''}</p>
           <div className="verse-footer">
             <span className="verse-note">Curated daily rotation</span>
             <button
