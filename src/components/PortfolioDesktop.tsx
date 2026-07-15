@@ -2,9 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { projects, type Project } from '../data/projects';
 import { awards, certifications, experience, leadership } from '../data/experience';
 import { verseForDate } from '../data/verses';
+import { ContactWindow } from './ContactWindow';
 import { RickrollPlayer } from './RickrollPlayer';
 
-type WindowId = 'intro' | 'about' | 'projects' | 'project-detail' | 'experience' | 'resume' | 'github' | 'linkedin' | 'rickroll';
+type WindowId = 'intro' | 'about' | 'projects' | 'project-detail' | 'experience' | 'resume' | 'github' | 'linkedin' | 'rickroll' | 'contact';
 
 const ESV_COPYRIGHT_NOTICE = 'Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. ESV Text Edition: 2025. The ESV text may not be quoted in any publication made available to the public by a Creative Commons license. The ESV may not be translated in whole or in part into any other language. Used by permission. All rights reserved.';
 
@@ -47,7 +48,8 @@ const WINDOW_DEFAULTS: Record<WindowId, Omit<WindowState, 'z'>> = {
   resume: { id: 'resume', title: 'Resume — Preview', open: false, minimized: false, maximized: false, x: 330, y: 55, width: 980, height: 740 },
   github: { id: 'github', title: 'GitHub', open: false, minimized: false, maximized: false, x: 520, y: 145, width: 650, height: 460 },
   linkedin: { id: 'linkedin', title: 'LinkedIn', open: false, minimized: false, maximized: false, x: 500, y: 125, width: 690, height: 500 },
-  rickroll: { id: 'rickroll', title: 'Definitely Important.mov', open: false, minimized: false, maximized: false, x: 350, y: 90, width: 840, height: 600 }
+  rickroll: { id: 'rickroll', title: 'Definitely Important.mov', open: false, minimized: false, maximized: false, x: 350, y: 90, width: 840, height: 600 },
+  contact: { id: 'contact', title: 'New Message', open: false, minimized: false, maximized: false, x: 430, y: 60, width: 720, height: 680 }
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -267,7 +269,7 @@ function IntroWindow({ ready, reducedMotion, onEnter }: { ready: boolean; reduce
   );
 }
 
-function AboutWindow() {
+function AboutWindow({ onContact }: { onContact: () => void }) {
   return (
     <div className="about-layout">
       <div className="about-copy">
@@ -283,7 +285,7 @@ function AboutWindow() {
           Outside engineering, I find rhythm in music, playing piano, long runs, faith, and time with the people I care about.
         </p>
         <div className="about-actions">
-          <a className="primary-button compact" href="mailto:stanleyzebulonp@gmail.com">Email me</a>
+          <button className="primary-button compact" type="button" onClick={onContact}>Email me</button>
           <a className="secondary-button compact" href="https://github.com/iampenuel" target="_blank" rel="noreferrer">GitHub</a>
           <a className="secondary-button compact" href="https://www.linkedin.com/in/penuel-stanley-zebulon/" target="_blank" rel="noreferrer">LinkedIn</a>
         </div>
@@ -510,8 +512,10 @@ export default function PortfolioDesktop() {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [windowMenuOpen, setWindowMenuOpen] = useState(false);
   const [scriptureAttributionOpen, setScriptureAttributionOpen] = useState(false);
+  const [contactCloseRequest, setContactCloseRequest] = useState(0);
   const scriptureAttributionDialogRef = useRef<HTMLDialogElement>(null);
   const scriptureAttributionTriggerRef = useRef<HTMLButtonElement>(null);
+  const contactTriggerRef = useRef<HTMLButtonElement>(null);
   const now = useClock();
   const reducedMotion = useReducedMotion();
 
@@ -567,6 +571,10 @@ export default function PortfolioDesktop() {
   };
 
   const closeWindow = (id: WindowId) => updateWindow(id, { open: false, minimized: false });
+  const closeContactWindow = () => {
+    closeWindow('contact');
+    window.requestAnimationFrame(() => contactTriggerRef.current?.focus());
+  };
   const minimizeWindow = (id: WindowId) => updateWindow(id, { minimized: true });
   const maximizeWindow = (id: WindowId) => updateWindow(id, { maximized: !windows[id].maximized });
 
@@ -608,7 +616,7 @@ export default function PortfolioDesktop() {
           <button onClick={(event) => { event.stopPropagation(); openWindow('about'); }}>Portfolio</button>
           <button onClick={(event) => { event.stopPropagation(); openWindow('projects'); }}>File</button>
           <button onClick={(event) => { event.stopPropagation(); setWindowMenuOpen(!windowMenuOpen); }}>Window</button>
-          <a href="mailto:stanleyzebulonp@gmail.com">Contact</a>
+          <button ref={contactTriggerRef} className="contact-menu-trigger" type="button" onClick={(event) => { event.stopPropagation(); openWindow('contact'); }}>Contact</button>
         </div>
         <div className="menu-right">
           <span aria-label="Silent mode">◖</span>
@@ -716,21 +724,22 @@ export default function PortfolioDesktop() {
             state={windows[id]}
             active={activeWindow === id}
             onFocus={() => focusWindow(id)}
-            onClose={() => closeWindow(id)}
+            onClose={() => id === 'contact' ? setContactCloseRequest((current) => current + 1) : closeWindow(id)}
             onMinimize={() => minimizeWindow(id)}
             onMaximize={() => maximizeWindow(id)}
             onMove={(x, y) => updateWindow(id, { x, y })}
             onResize={(width, height) => updateWindow(id, { width, height })}
-            keepMountedWhenMinimized={id === 'rickroll'}
+            keepMountedWhenMinimized={id === 'rickroll' || id === 'contact'}
           >
             {id === 'intro' && <IntroWindow ready={!booting} reducedMotion={reducedMotion} onEnter={() => closeWindow('intro')} />}
-            {id === 'about' && <AboutWindow />}
+            {id === 'about' && <AboutWindow onContact={() => openWindow('contact')} />}
             {id === 'projects' && <ProjectsWindow onOpenProject={openProject} />}
             {id === 'project-detail' && <ProjectDetailWindow project={selectedProject} />}
             {id === 'experience' && <ExperienceWindow />}
             {id === 'resume' && <ResumeWindow />}
             {id === 'github' && <SocialProfile kind="github" />}
             {id === 'linkedin' && <SocialProfile kind="linkedin" />}
+            {id === 'contact' && <ContactWindow closeRequest={contactCloseRequest} onClose={closeContactWindow} />}
             {id === 'rickroll' && (
               <RickrollPlayer
                 minimized={windows.rickroll.minimized}

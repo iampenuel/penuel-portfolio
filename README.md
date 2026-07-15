@@ -60,6 +60,10 @@ The curated rotation uses five ESV references with the required Crossway digital
 
 The desktop includes a deliberately understated “Definitely Important” folder. Its QuickTime-style window lazily embeds the official YouTube upload through the privacy-enhanced player host; no copyrighted video or audio is downloaded, proxied, or stored in this repository. Playback begins at 0:42 and stops at the 1:00 mark, with an accessible click-to-play fallback when sound autoplay is blocked and an in-window recovery state if the player is unavailable. Keyboard controls, minimized-window pausing, responsive sizing, and reduced-motion preferences are supported.
 
+## Contact form
+
+The menu-bar Contact action opens an in-site macOS Mail-style compose window. Form submissions are delivered through Formspree using the build-time `PUBLIC_FORMSPREE_FORM_ID` value. Copy `.env.example` to `.env.local` and set the value locally; configure the same variable for Vercel Production, Preview, and Development builds. The form validates names, email, and message length without leaving the desktop, preserves drafts across window changes, includes a hidden spam honeypot, and keeps a direct-email fallback available when delivery fails.
+
 ## Deployment
 
 This is a static Astro project and can be deployed to Vercel, Netlify, Cloudflare Pages, or GitHub Pages after updating `site` in `astro.config.mjs`.
