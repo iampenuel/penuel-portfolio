@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { projects, type Project } from '../data/projects';
 import { awards, certifications, experience, leadership } from '../data/experience';
 import { verseForDate } from '../data/verses';
+import { RickrollPlayer } from './RickrollPlayer';
 
-type WindowId = 'intro' | 'about' | 'projects' | 'project-detail' | 'experience' | 'resume' | 'github' | 'linkedin';
+type WindowId = 'intro' | 'about' | 'projects' | 'project-detail' | 'experience' | 'resume' | 'github' | 'linkedin' | 'rickroll';
 
 const ESV_COPYRIGHT_NOTICE = 'Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. ESV Text Edition: 2025. The ESV text may not be quoted in any publication made available to the public by a Creative Commons license. The ESV may not be translated in whole or in part into any other language. Used by permission. All rights reserved.';
 
@@ -32,6 +33,7 @@ const DESKTOP_ITEMS: DesktopItem[] = [
   { id: 'github', label: 'GitHub', column: 2, row: 0 },
   { id: 'about', label: 'About Me', column: 1, row: 1 },
   { id: 'linkedin', label: 'LinkedIn', column: 2, row: 1 },
+  { id: 'rickroll', label: 'Definitely Important', column: 2, row: 2 },
   { id: 'experience', label: 'Experience', column: 1, row: 2 },
   { id: 'resume', label: 'Resume', column: 1, row: 3 }
 ];
@@ -44,7 +46,8 @@ const WINDOW_DEFAULTS: Record<WindowId, Omit<WindowState, 'z'>> = {
   experience: { id: 'experience', title: 'Experience', open: false, minimized: false, maximized: false, x: 330, y: 70, width: 980, height: 720 },
   resume: { id: 'resume', title: 'Resume — Preview', open: false, minimized: false, maximized: false, x: 330, y: 55, width: 980, height: 740 },
   github: { id: 'github', title: 'GitHub', open: false, minimized: false, maximized: false, x: 520, y: 145, width: 650, height: 460 },
-  linkedin: { id: 'linkedin', title: 'LinkedIn', open: false, minimized: false, maximized: false, x: 500, y: 125, width: 690, height: 500 }
+  linkedin: { id: 'linkedin', title: 'LinkedIn', open: false, minimized: false, maximized: false, x: 500, y: 125, width: 690, height: 500 },
+  rickroll: { id: 'rickroll', title: 'Definitely Important.mov', open: false, minimized: false, maximized: false, x: 350, y: 90, width: 840, height: 600 }
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -139,6 +142,7 @@ function MacWindow({
   onMaximize,
   onMove,
   onResize,
+  keepMountedWhenMinimized = false,
   children
 }: {
   state: WindowState;
@@ -149,12 +153,13 @@ function MacWindow({
   onMaximize: () => void;
   onMove: (x: number, y: number) => void;
   onResize: (width: number, height: number) => void;
+  keepMountedWhenMinimized?: boolean;
   children: React.ReactNode;
 }) {
   const dragRef = useRef<{ startX: number; startY: number; x: number; y: number } | null>(null);
   const resizeRef = useRef<{ startX: number; startY: number; width: number; height: number } | null>(null);
 
-  if (!state.open || state.minimized) return null;
+  if (!state.open || (state.minimized && !keepMountedWhenMinimized)) return null;
 
   const beginDrag = (event: React.PointerEvent<HTMLDivElement>) => {
     if (state.maximized || event.button !== 0) return;
@@ -209,6 +214,7 @@ function MacWindow({
       style={style}
       role="dialog"
       aria-label={state.title}
+      hidden={state.minimized}
       onPointerDown={onFocus}
     >
       <header className="window-titlebar" onPointerDown={beginDrag} onPointerMove={drag} onPointerUp={endDrag} onPointerCancel={endDrag}>
@@ -576,6 +582,19 @@ export default function PortfolioDesktop() {
     setContextMenu({ x: clamp(event.clientX, 8, window.innerWidth - 230), y: clamp(event.clientY, 38, window.innerHeight - 230) });
   };
 
+  useEffect(() => {
+    if (activeWindow !== 'rickroll') return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setWindows((current) => ({
+        ...current,
+        rickroll: { ...current.rickroll, open: false, minimized: false }
+      }));
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [activeWindow]);
+
   return (
     <main className="desktop" onClick={() => { setSelectedIcon(null); setContextMenu(null); setWindowMenuOpen(false); }} onContextMenu={handleContextMenu}>
       <div className={`boot-screen ${booting ? 'visible' : ''}`} aria-hidden={!booting}>
@@ -702,6 +721,7 @@ export default function PortfolioDesktop() {
             onMaximize={() => maximizeWindow(id)}
             onMove={(x, y) => updateWindow(id, { x, y })}
             onResize={(width, height) => updateWindow(id, { width, height })}
+            keepMountedWhenMinimized={id === 'rickroll'}
           >
             {id === 'intro' && <IntroWindow ready={!booting} reducedMotion={reducedMotion} onEnter={() => closeWindow('intro')} />}
             {id === 'about' && <AboutWindow />}
@@ -711,6 +731,13 @@ export default function PortfolioDesktop() {
             {id === 'resume' && <ResumeWindow />}
             {id === 'github' && <SocialProfile kind="github" />}
             {id === 'linkedin' && <SocialProfile kind="linkedin" />}
+            {id === 'rickroll' && (
+              <RickrollPlayer
+                minimized={windows.rickroll.minimized}
+                reducedMotion={reducedMotion}
+                onClose={() => closeWindow('rickroll')}
+              />
+            )}
           </MacWindow>
         ))}
 
@@ -719,6 +746,7 @@ export default function PortfolioDesktop() {
             <button onClick={() => openWindow('about')}>About This Portfolio</button>
             <button onClick={() => openWindow('projects')}>Open Projects</button>
             <button onClick={() => openWindow('resume')}>Preview Resume</button>
+            <button onClick={() => openWindow('rickroll')}>Open Definitely Important</button>
             <a href="/resume/Penuel_Stanley-Zebulon_Resume.pdf" download>Download Resume</a>
             <hr />
             <button onClick={resetDesktop}>Reset Desktop</button>
