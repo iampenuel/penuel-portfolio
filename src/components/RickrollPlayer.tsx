@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 const VIDEO_ID = 'dQw4w9WgXcQ';
 const VIDEO_URL = `https://www.youtube.com/watch?v=${VIDEO_ID}`;
 const START_SECONDS = 42;
-const END_SECONDS = 67;
+const END_SECONDS = 60;
 const REVEAL_AFTER_SECONDS = 7;
 const PLAYER_SCRIPT_ID = 'youtube-iframe-api';
 
@@ -144,7 +144,7 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose }: { minimize
     setNeedsResume(false);
     setShowRickroll(true);
     setPhase('ended');
-    setStatus('The 25-second segment has ended.');
+    setStatus('The segment has ended at the one-minute mark.');
   }, [clearChecks]);
 
   const startProgressChecks = useCallback(() => {
@@ -361,4 +361,3 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose }: { minimize
     </div>
   );
 }
-

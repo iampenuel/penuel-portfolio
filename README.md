@@ -58,7 +58,7 @@ The curated rotation uses five ESV references with the required Crossway digital
 
 ## Embedded media easter egg
 
-The desktop includes a deliberately understated “Definitely Important” folder. Its QuickTime-style window lazily embeds the official YouTube upload through the privacy-enhanced player host; no copyrighted video or audio is downloaded, proxied, or stored in this repository. Playback is limited to an approximately 25-second segment, with an accessible click-to-play fallback when sound autoplay is blocked and an in-window recovery state if the player is unavailable. Keyboard controls, minimized-window pausing, responsive sizing, and reduced-motion preferences are supported.
+The desktop includes a deliberately understated “Definitely Important” folder. Its QuickTime-style window lazily embeds the official YouTube upload through the privacy-enhanced player host; no copyrighted video or audio is downloaded, proxied, or stored in this repository. Playback begins at 0:42 and stops at the 1:00 mark, with an accessible click-to-play fallback when sound autoplay is blocked and an in-window recovery state if the player is unavailable. Keyboard controls, minimized-window pausing, responsive sizing, and reduced-motion preferences are supported.
 
 ## Deployment
 
