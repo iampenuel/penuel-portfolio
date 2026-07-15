@@ -336,7 +336,7 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose }: { minimize
           )}
           {phase === 'ended' && (
             <div className="rickroll-end-card">
-              <strong>Yep, you’ve been rickrolled, LOL.</strong>
+              <strong>Yep. you just got rickrolled :)</strong>
               <div>
                 <button className="primary-button compact" type="button" onClick={replay}>Replay</button>
                 <button className="secondary-button compact" type="button" onClick={onClose}>Close</button>
