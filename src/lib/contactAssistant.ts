@@ -38,6 +38,16 @@ export function mergeTranscript(message: string, transcript: string, maxLength =
   return `${message}${separator}${segment}`.slice(0, maxLength);
 }
 
+export function dictationControlPresentation(listening: boolean) {
+  return listening
+    ? { label: 'Stop', accessibleLabel: 'Stop voice dictation' }
+    : { label: 'Dictate', accessibleLabel: 'Start voice dictation' };
+}
+
+export function dictationEndNotice(completedSuccessfully: boolean) {
+  return completedSuccessfully ? 'Done listening.' : '';
+}
+
 export function applyAiSuggestion(original: string, suggestion: string) {
   return { message: suggestion, undoMessage: original };
 }
@@ -63,4 +73,23 @@ export function canStartAiRequest(options: {
     && !options.listening
     && !options.requestInFlight
     && options.now >= options.cooldownUntil;
+}
+
+export function scrollTopToRevealStart(options: {
+  scrollTop: number;
+  containerTop: number;
+  elementTop: number;
+  margin: number;
+}) {
+  return Math.max(0, options.scrollTop + options.elementTop - options.containerTop - options.margin);
+}
+
+export function scrollTopToRevealEnd(options: {
+  scrollTop: number;
+  visibleBottom: number;
+  elementBottom: number;
+  margin: number;
+}) {
+  if (options.elementBottom <= options.visibleBottom) return null;
+  return Math.max(0, options.scrollTop + options.elementBottom - options.visibleBottom + options.margin);
 }

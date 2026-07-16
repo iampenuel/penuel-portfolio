@@ -505,6 +505,7 @@ a { color: inherit; }
 }
 .contact-toolbar-button:hover:not(:disabled), .contact-toolbar-button[aria-expanded="true"] { color: #f7f7f9; background: rgba(255,255,255,.08); }
 .contact-toolbar-button:disabled { cursor: not-allowed; opacity: .42; }
+.contact-dictation-toggle { min-width: 78px; }
 .contact-toolbar-button.listening { color: #f1d8d7; background: rgba(255,255,255,.055); }
 .contact-tool-icon { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.45; stroke-linecap: round; stroke-linejoin: round; }
 .contact-recording-dot { width: 6px; height: 6px; margin-left: -2px; background: #ff6961; border-radius: 50%; animation: contact-listening 1.2s ease-in-out infinite; }
@@ -550,7 +551,7 @@ a { color: inherit; }
 .contact-interim { color: #a5a5ad; font-style: italic; }
 .contact-ai-feedback { min-height: 24px; }
 .contact-ai-feedback.error { padding-left: 9px; border-left: 2px solid rgba(255,105,97,.72); }
-.contact-suggestion-review { min-width: 0; margin: 2px 0 18px; padding: 16px; background: #2b2b2e; border: 1px solid rgba(255,255,255,.11); border-radius: 12px; }
+.contact-suggestion-review { min-width: 0; margin: 2px 0 18px; padding: 16px; scroll-margin-top: 14px; background: #2b2b2e; border: 1px solid rgba(255,255,255,.11); border-radius: 12px; }
 .contact-suggestion-heading h3 { margin: 0; font-size: 17px; letter-spacing: -.02em; outline: 0; }
 .contact-suggestion-heading p { margin: 3px 0 13px; color: #9e9ea6; font-size: 11px; }
 .contact-suggestion-grid { min-width: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; border-top: 1px solid rgba(255,255,255,.08); border-bottom: 1px solid rgba(255,255,255,.08); }

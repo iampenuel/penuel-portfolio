@@ -10,9 +10,13 @@ import {
 import {
   applyAiSuggestion,
   canStartAiRequest,
+  dictationControlPresentation,
+  dictationEndNotice,
   getOrCreateVisitorId,
   keepOriginal,
   mergeTranscript,
+  scrollTopToRevealEnd,
+  scrollTopToRevealStart,
   undoAiSuggestion
 } from '../lib/contactAssistant';
 
@@ -171,6 +175,7 @@ export function ContactWindow({
   const [cooldownActive, setCooldownActive] = useState(false);
 
   const formRef = useRef<HTMLFormElement>(null);
+  const composeScrollRef = useRef<HTMLDivElement>(null);
   const firstNameRef = useRef<HTMLInputElement>(null);
   const lastNameRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
@@ -179,12 +184,16 @@ export function ContactWindow({
   const errorHeadingRef = useRef<HTMLHeadingElement>(null);
   const keepWritingRef = useRef<HTMLButtonElement>(null);
   const tidyButtonRef = useRef<HTMLButtonElement>(null);
+  const messageToolbarRef = useRef<HTMLDivElement>(null);
   const modeMenuRef = useRef<HTMLDivElement>(null);
   const modeMenuFirstRef = useRef<HTMLButtonElement>(null);
+  const suggestionReviewRef = useRef<HTMLElement>(null);
   const suggestionHeadingRef = useRef<HTMLHeadingElement>(null);
   const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
   const finalResultsRef = useRef(new Map<number, string>());
   const voiceNoticeTimerRef = useRef<number | null>(null);
+  const voiceSessionSuccessfulRef = useRef(false);
+  const suggestionRevealFrameRef = useRef<number | null>(null);
   const aiAbortRef = useRef<AbortController | null>(null);
   const aiRequestInFlightRef = useRef(false);
   const aiAbortForLifecycleRef = useRef(false);
@@ -192,6 +201,9 @@ export function ContactWindow({
   const cooldownTimerRef = useRef<number | null>(null);
   const submittingRef = useRef(false);
   const observedCloseRequestRef = useRef(closeRequest);
+  const minimizedRef = useRef(minimized);
+
+  minimizedRef.current = minimized;
 
   const fieldRefs = useMemo(() => ({
     firstName: firstNameRef,
@@ -212,8 +224,26 @@ export function ContactWindow({
     && !isListening
     && !cooldownActive;
 
+  const clearVoiceNoticeTimer = useCallback(() => {
+    if (voiceNoticeTimerRef.current) {
+      window.clearTimeout(voiceNoticeTimerRef.current);
+      voiceNoticeTimerRef.current = null;
+    }
+  }, []);
+
+  const showDoneListening = useCallback(() => {
+    clearVoiceNoticeTimer();
+    setVoiceNotice(dictationEndNotice(true));
+    setVoiceNoticeIsError(false);
+    voiceNoticeTimerRef.current = window.setTimeout(() => {
+      setVoiceNotice('');
+      voiceNoticeTimerRef.current = null;
+    }, 2_500);
+  }, [clearVoiceNoticeTimer]);
+
   const stopRecognition = useCallback((abort = true) => {
     const recognition = recognitionRef.current;
+    if (abort) voiceSessionSuccessfulRef.current = false;
     if (recognition) {
       try {
         if (abort) recognition.abort();
@@ -224,6 +254,55 @@ export function ContactWindow({
     }
     setIsListening(false);
     setInterimTranscript('');
+  }, []);
+
+  const scrollMessageToolbarIntoView = useCallback(() => {
+    window.requestAnimationFrame(() => {
+      if (minimizedRef.current) return;
+      const container = composeScrollRef.current;
+      const toolbar = messageToolbarRef.current;
+      if (!container || !toolbar) return;
+      const containerRect = container.getBoundingClientRect();
+      const toolbarRect = toolbar.getBoundingClientRect();
+      const visualViewportBottom = window.visualViewport
+        ? window.visualViewport.offsetTop + window.visualViewport.height
+        : containerRect.bottom;
+      const nextScrollTop = scrollTopToRevealEnd({
+        scrollTop: container.scrollTop,
+        visibleBottom: Math.min(containerRect.bottom, visualViewportBottom),
+        elementBottom: toolbarRect.bottom,
+        margin: 12
+      });
+      if (nextScrollTop === null) return;
+      container.scrollTo({
+        top: nextScrollTop,
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+      });
+    });
+  }, []);
+
+  const revealCompletedSuggestion = useCallback(() => {
+    if (suggestionRevealFrameRef.current) window.cancelAnimationFrame(suggestionRevealFrameRef.current);
+    suggestionRevealFrameRef.current = window.requestAnimationFrame(() => {
+      suggestionRevealFrameRef.current = null;
+      if (minimizedRef.current) return;
+      const container = composeScrollRef.current;
+      const review = suggestionReviewRef.current;
+      const heading = suggestionHeadingRef.current;
+      if (!container || !review || !heading) return;
+      const containerRect = container.getBoundingClientRect();
+      const reviewRect = review.getBoundingClientRect();
+      container.scrollTo({
+        top: scrollTopToRevealStart({
+          scrollTop: container.scrollTop,
+          containerTop: containerRect.top,
+          elementTop: reviewRect.top,
+          margin: 14
+        }),
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+      });
+      heading.focus({ preventScroll: true });
+    });
   }, []);
 
   const cancelAiRequest = useCallback((forLifecycle = true) => {
@@ -261,7 +340,8 @@ export function ContactWindow({
     setVoiceNoticeIsError(false);
     setInterimTranscript('');
     submittingRef.current = false;
-  }, [resetAssistant, stopRecognition]);
+    clearVoiceNoticeTimer();
+  }, [clearVoiceNoticeTimer, resetAssistant, stopRecognition]);
 
   const closeAndClear = useCallback(() => {
     clearForm();
@@ -323,6 +403,7 @@ export function ContactWindow({
     aiAbortRef.current?.abort();
     if (voiceNoticeTimerRef.current) window.clearTimeout(voiceNoticeTimerRef.current);
     if (cooldownTimerRef.current) window.clearTimeout(cooldownTimerRef.current);
+    if (suggestionRevealFrameRef.current) window.cancelAnimationFrame(suggestionRevealFrameRef.current);
   }, []);
 
   const updateField = (field: keyof ContactValues, value: string) => {
@@ -330,13 +411,6 @@ export function ContactWindow({
     if (field !== 'website' && errors[field]) {
       setErrors((current) => ({ ...current, [field]: undefined }));
     }
-  };
-
-  const showTranscriptAdded = () => {
-    setVoiceNotice('Transcript added.');
-    setVoiceNoticeIsError(false);
-    if (voiceNoticeTimerRef.current) window.clearTimeout(voiceNoticeTimerRef.current);
-    voiceNoticeTimerRef.current = window.setTimeout(() => setVoiceNotice(''), 4_000);
   };
 
   const startRecognition = () => {
@@ -372,9 +446,10 @@ export function ContactWindow({
           addedFinal = true;
         }
         setInterimTranscript(interim.trim());
-        if (addedFinal) showTranscriptAdded();
+        if (addedFinal) scrollMessageToolbarIntoView();
       };
       recognition.onerror = (event) => {
+        voiceSessionSuccessfulRef.current = false;
         setIsListening(false);
         setInterimTranscript('');
         if (event.error === 'aborted') return;
@@ -387,13 +462,18 @@ export function ContactWindow({
         setVoiceNoticeIsError(true);
       };
       recognition.onend = () => {
+        const completedSuccessfully = voiceSessionSuccessfulRef.current;
+        voiceSessionSuccessfulRef.current = false;
         setIsListening(false);
         setInterimTranscript('');
+        if (completedSuccessfully) showDoneListening();
       };
       recognitionRef.current = recognition;
     }
 
     finalResultsRef.current.clear();
+    clearVoiceNoticeTimer();
+    voiceSessionSuccessfulRef.current = true;
     setVoiceNotice('');
     setVoiceNoticeIsError(false);
     setInterimTranscript('');
@@ -401,6 +481,7 @@ export function ContactWindow({
       recognitionRef.current.start();
       setIsListening(true);
     } catch {
+      voiceSessionSuccessfulRef.current = false;
       setIsListening(false);
       setVoiceNotice('I didn’t catch that. Try again or type instead.');
       setVoiceNoticeIsError(true);
@@ -501,7 +582,7 @@ export function ContactWindow({
       setEditableSuggestion(payload.suggestion);
       setAssistantState('review');
       setAssistantStatus('Suggestion ready.');
-      window.requestAnimationFrame(() => suggestionHeadingRef.current?.focus());
+      revealCompletedSuggestion();
     } catch (caught) {
       if (caught instanceof DOMException && caught.name === 'AbortError' && aiAbortForLifecycleRef.current) {
         setAssistantState('idle');
@@ -652,9 +733,10 @@ export function ContactWindow({
       : voiceNotice;
   const tidyDisabled = !canOpenModeMenu;
   const reviewOpen = assistantState === 'review' && preAiOriginal !== null;
+  const dictationControl = dictationControlPresentation(isListening);
 
   return (
-    <div className="mail-compose">
+    <div ref={composeScrollRef} className="mail-compose">
       <form ref={formRef} className="contact-form" noValidate onSubmit={submit}>
         <div className="mail-compose-intro">
           <span className="eyebrow">NEW MESSAGE</span>
@@ -754,21 +836,21 @@ export function ContactWindow({
               aria-describedby={`contact-message-count contact-voice-privacy${errors.message ? ' contact-message-error' : ''}`}
               onChange={(event) => updateField('message', event.target.value)}
             />
-            <div className="contact-editor-toolbar">
+            <div ref={messageToolbarRef} className="contact-editor-toolbar">
               <div className="contact-tool-cluster">
                 <button
-                  className={`contact-toolbar-button${isListening ? ' listening' : ''}`}
+                  className={`contact-toolbar-button contact-dictation-toggle${isListening ? ' listening' : ''}`}
                   type="button"
-                  aria-label={isListening ? 'Stop voice dictation' : 'Start voice dictation'}
+                  aria-label={dictationControl.accessibleLabel}
                   aria-describedby="contact-voice-privacy"
                   aria-pressed={isListening}
                   disabled={voiceSupported !== true}
-                  title={isListening ? 'Stop voice dictation' : 'Start voice dictation'}
+                  title={dictationControl.accessibleLabel}
                   onClick={toggleRecognition}
                 >
                   <MicrophoneIcon />
                   {isListening && <span className="contact-recording-dot" aria-hidden="true" />}
-                  <span>{isListening ? 'Listening…' : 'Dictate'}</span>
+                  <span>{dictationControl.label}</span>
                 </button>
                 <button
                   ref={tidyButtonRef}
@@ -807,7 +889,6 @@ export function ContactWindow({
                         {label}
                       </button>
                     ))}
-                    <p>Gemma 4 rewrites only your message. Your name and email stay out of the request.</p>
                   </div>
                 )}
               </div>
@@ -844,7 +925,7 @@ export function ContactWindow({
         </div>
 
         {reviewOpen && (
-          <section id="contact-writing-assistant" className="contact-suggestion-review" aria-labelledby="contact-suggestion-title">
+          <section ref={suggestionReviewRef} id="contact-writing-assistant" className="contact-suggestion-review" aria-labelledby="contact-suggestion-title">
             <div className="contact-suggestion-heading">
               <h3 id="contact-suggestion-title" ref={suggestionHeadingRef} tabIndex={-1}>Suggested edit</h3>
               <p>Review it before using it.</p>
@@ -878,7 +959,7 @@ export function ContactWindow({
               </button>
               <button className="contact-quiet-action" type="button" onClick={keepMyOriginal}>Keep original</button>
             </div>
-            <p className="contact-ai-disclosure">Gemma 4 rewrites only your message. Your name and email stay out of the request.</p>
+            <p className="contact-ai-disclosure">Your message stays yours. The rewrite uses only the message text, and you review every edit before sending.</p>
             <span className="sr-only" aria-live="polite">{assistantStatus}</span>
           </section>
         )}

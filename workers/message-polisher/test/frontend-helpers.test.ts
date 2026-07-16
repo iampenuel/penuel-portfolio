@@ -3,9 +3,13 @@ import {
   VISITOR_STORAGE_KEY,
   applyAiSuggestion,
   canStartAiRequest,
+  dictationControlPresentation,
+  dictationEndNotice,
   getOrCreateVisitorId,
   keepOriginal,
   mergeTranscript,
+  scrollTopToRevealEnd,
+  scrollTopToRevealStart,
   undoAiSuggestion
 } from '../../../src/lib/contactAssistant';
 
@@ -37,6 +41,50 @@ describe('dictation transcript merging', () => {
 
   it('does not insert the same finalized segment twice', () => {
     expect(mergeTranscript('Typed opening. Dictated ending.', 'Dictated ending.')).toBe('Typed opening. Dictated ending.');
+  });
+});
+
+describe('dictation control states', () => {
+  it('uses explicit idle and listening labels', () => {
+    expect(dictationControlPresentation(false)).toEqual({
+      label: 'Dictate',
+      accessibleLabel: 'Start voice dictation'
+    });
+    expect(dictationControlPresentation(true)).toEqual({
+      label: 'Stop',
+      accessibleLabel: 'Stop voice dictation'
+    });
+  });
+
+  it('announces completion only after a successful recognition end', () => {
+    expect(dictationEndNotice(true)).toBe('Done listening.');
+    expect(dictationEndNotice(false)).toBe('');
+  });
+});
+
+describe('contact internal scrolling', () => {
+  it('aligns a completed suggestion near the top of the contact scroller', () => {
+    expect(scrollTopToRevealStart({
+      scrollTop: 240,
+      containerTop: 100,
+      elementTop: 640,
+      margin: 14
+    })).toBe(766);
+  });
+
+  it('scrolls only enough to reveal the message toolbar after dictation', () => {
+    expect(scrollTopToRevealEnd({
+      scrollTop: 180,
+      visibleBottom: 700,
+      elementBottom: 742,
+      margin: 12
+    })).toBe(234);
+    expect(scrollTopToRevealEnd({
+      scrollTop: 180,
+      visibleBottom: 700,
+      elementBottom: 680,
+      margin: 12
+    })).toBeNull();
   });
 });
 
