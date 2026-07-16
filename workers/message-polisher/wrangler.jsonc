@@ -1,0 +1,45 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "penuel-portfolio-message-polisher",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-16",
+  "workers_dev": true,
+  "ai": {
+    "binding": "AI"
+  },
+  "vars": {
+    "AI_POLISH_ENABLED": "true"
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "USAGE_GUARD",
+        "class_name": "UsageGuard"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["UsageGuard"]
+    }
+  ],
+  "ratelimits": [
+    {
+      "name": "VISITOR_RATE_LIMITER",
+      "namespace_id": "79142001",
+      "simple": {
+        "limit": 3,
+        "period": 60
+      }
+    },
+    {
+      "name": "GLOBAL_RATE_LIMITER",
+      "namespace_id": "79142002",
+      "simple": {
+        "limit": 20,
+        "period": 60
+      }
+    }
+  ]
+}

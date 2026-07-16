@@ -739,7 +739,13 @@ export default function PortfolioDesktop() {
             {id === 'resume' && <ResumeWindow />}
             {id === 'github' && <SocialProfile kind="github" />}
             {id === 'linkedin' && <SocialProfile kind="linkedin" />}
-            {id === 'contact' && <ContactWindow closeRequest={contactCloseRequest} onClose={closeContactWindow} />}
+            {id === 'contact' && (
+              <ContactWindow
+                closeRequest={contactCloseRequest}
+                minimized={windows.contact.minimized}
+                onClose={closeContactWindow}
+              />
+            )}
             {id === 'rickroll' && (
               <RickrollPlayer
                 minimized={windows.rickroll.minimized}
