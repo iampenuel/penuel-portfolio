@@ -741,7 +741,7 @@ export function ContactWindow({
         <div className="mail-compose-intro">
           <span className="eyebrow">NEW MESSAGE</span>
           <h2>Let’s talk.</h2>
-          <p>Have a question, opportunity, or thoughts on the site? Send me a note.</p>
+          <p>Have a question, an opportunity, some feedback—or thoughts on the rickroll? Send me a note.</p>
           <small>I’ll only use your details to reply.</small>
         </div>
 
