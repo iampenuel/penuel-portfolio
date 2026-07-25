@@ -273,7 +273,7 @@ a { color: inherit; }
 
 .intro-content { height: 100%; padding: 34px 52px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; background: rgba(28,28,30,.96); }
 .intro-content h1 { margin: 9px 0 13px; font-size: clamp(32px, 4vw, 49px); line-height: .98; letter-spacing: -.05em; }
-.typing-copy { min-height: 155px; max-width: 510px; margin: 0; color: #d1d1d7; font-size: 17px; line-height: 1.48; }
+.typing-copy { min-height: 84px; max-width: 510px; margin: 0; color: #d1d1d7; font-size: 17px; line-height: 1.48; }
 .typing-caret { display: inline-block; margin-left: 2px; animation: blink .8s steps(1) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
 .interaction-tip { margin: 18px 0 16px; color: #9d9da5; font-size: 13px; }

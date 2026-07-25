@@ -40,7 +40,7 @@ const DESKTOP_ITEMS: DesktopItem[] = [
 ];
 
 const WINDOW_DEFAULTS: Record<WindowId, Omit<WindowState, 'z'>> = {
-  intro: { id: 'intro', title: 'Welcome', open: true, minimized: false, maximized: false, x: 450, y: 150, width: 610, height: 460 },
+  intro: { id: 'intro', title: 'Welcome', open: true, minimized: false, maximized: false, x: 450, y: 150, width: 610, height: 400 },
   about: { id: 'about', title: 'About Me', open: false, minimized: false, maximized: false, x: 420, y: 110, width: 780, height: 590 },
   projects: { id: 'projects', title: 'Projects', open: false, minimized: false, maximized: true, x: 20, y: 40, width: 1180, height: 760 },
   'project-detail': { id: 'project-detail', title: 'Project', open: false, minimized: false, maximized: false, x: 260, y: 58, width: 1080, height: 720 },
@@ -256,7 +256,7 @@ function DesktopIcon({ item, selected, onSelect, onOpen }: { item: DesktopItem; 
 }
 
 function IntroWindow({ ready, reducedMotion, onEnter }: { ready: boolean; reducedMotion: boolean; onEnter: () => void }) {
-  const copy = 'Welcome to my desktop. I’m Penuel (pronounced “peh-new-ehl”). I build thoughtful AI and digital products that make hard things clearer and more human. My work often centers on human-centered AI, product design, and healthcare—but I’m drawn to any problem where technology can help without losing sight of people.';
+  const copy = 'Welcome to my desktop. I’m Penuel (pronounced “peh-new-ehl”). My work, experience, and a few surprises are tucked inside these folders.';
   const typed = useTyping(copy, ready, reducedMotion, 19);
   return (
     <div className="intro-content">
