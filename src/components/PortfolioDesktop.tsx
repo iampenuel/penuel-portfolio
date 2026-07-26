@@ -282,7 +282,7 @@ function AboutWindow({ onContact }: { onContact: () => void }) {
           My Christian faith grounds that work in love, service, and human dignity. It is why I build human-centered AI that respects judgment, communicates its limits, and serves rather than replaces. Much of that focus lives in healthcare AI, across patient communication, maternal referral workflows, medical imaging, biosignals, and healthcare data.
         </p>
         <p>
-          Outside engineering, I am almost never without my Kindle and my Bible. Reading stretches my imagination, feeds my curiosity, and gives new shape to the way I think and create. I also find rhythm in music, playing piano, long runs, and time with the people I care about.
+          Outside engineering, I am almost never without my Kindle and my Bible. I really enjoy reading. There is something calming about slowing down, getting lost in a book, and letting a new idea sit with me for a while. I also find rhythm in music, playing piano, long runs, and time with the people I care about.
         </p>
         <div className="about-actions">
           <button className="primary-button compact" type="button" onClick={onContact}>Email me</button>
