@@ -276,13 +276,13 @@ function AboutWindow({ onContact }: { onContact: () => void }) {
         <span className="eyebrow">ABOUT ME</span>
         <h2>Builder. Learner. Problem solver.</h2>
         <p>
-          My path began in Electrical Engineering, where I learned to see systems as connected parts with real consequences. Curiosity led me toward artificial intelligence and a question that still guides me: how can technology make difficult experiences clearer without taking people out of the process?
+          My path began in Electrical Engineering, where I learned to see systems as connected parts with real consequences. Curiosity pulled me toward artificial intelligence and a question that still guides me: how can technology make difficult experiences clearer without taking people out of the process?
         </p>
         <p>
           My Christian faith grounds that work in love, service, and human dignity. It is why I build human-centered AI that respects judgment, communicates its limits, and serves rather than replaces. Much of that focus lives in healthcare AI, across patient communication, maternal referral workflows, medical imaging, biosignals, and healthcare data.
         </p>
         <p>
-          Outside engineering, I find rhythm in music, playing piano, long runs, faith, and time with the people I care about.
+          Outside engineering, I am almost never without my Kindle and my Bible. Reading stretches my imagination, feeds my curiosity, and gives new shape to the way I think and create. I also find rhythm in music, playing piano, long runs, and time with the people I care about.
         </p>
         <div className="about-actions">
           <button className="primary-button compact" type="button" onClick={onContact}>Email me</button>
