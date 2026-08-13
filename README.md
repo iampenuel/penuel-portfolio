@@ -1,112 +1,69 @@
 # Penuel's Mac Portfolio
 
-An Astro + React portfolio that behaves like Penuel Stanley-Zebulon's personal Mac desktop.
+An interactive macOS-inspired portfolio that turns my work, experience, and projects into a desktop you can explore.
 
-## Included in this starter
+**[Open the desktop →](https://iampenuel.vercel.app/)**
 
-- Custom Penuel bear wallpaper
-- macOS-style menu bar and live desktop clock
-- Single-click folder selection and double-click opening
-- Boot screen and typed welcome message
-- Draggable, resizable, minimizable, maximizable, stackable windows
-- Window restoration through the menu bar (no dock)
-- Custom desktop right-click menu
-- Curated daily Bible-verse rotation
-- About Me window with delayed portrait reveal
-- Finder-style Projects window
-- Large in-desktop project detail window; no route change
-- Experience, Leadership, Awards, and Certifications tabs
-- Resume preview and PDF download
-- GitHub and LinkedIn preview windows
-- Responsive mobile fallback
-- Silent interaction design
+![Penuel's macOS-inspired portfolio desktop](public/assets/readme/portfolio-preview.png)
 
-## Start locally
+## What this is
+
+This portfolio presents my work in human-centered AI, healthcare AI, machine learning, and product engineering through a familiar desktop metaphor. Instead of scrolling through a conventional landing page, visitors can open folders, move and resize windows, explore project details, and return to the same workspace without navigating away.
+
+The interface is playful, but the work behind it is practical: typed React components, data-driven content, accessible interactions, responsive behavior, and carefully bounded AI features. Project and experience entries live in focused data modules, so the presentation stays consistent as the portfolio evolves. It is designed to feel personal while giving recruiters and collaborators a quick path to projects, experience, credentials, and my résumé, while still rewarding anyone who wants to explore the details.
+
+## Highlights
+
+- A same-page macOS-style desktop with draggable, resizable, minimizable, and stackable windows
+- Finder-inspired project browsing with detailed project views and direct links to demos and source code
+- Dedicated windows for experience, leadership, awards, certifications, social profiles, and a downloadable résumé
+- Responsive desktop and mobile layouts with keyboard-friendly controls and reduced-motion support
+- A contact composer with Formspree delivery, local draft persistence, and a direct-email fallback
+- Optional browser voice dictation that never creates or uploads an audio recording
+- Human-reviewed message rewriting through a separate, rate-limited Cloudflare Worker
+- Small personal touches, including a rotating Scripture widget and one deliberately important folder
+
+## Stack
+
+| Area | Technologies |
+| --- | --- |
+| Frontend | Astro, React, TypeScript, CSS |
+| Quality | ESLint, TypeScript, Astro build checks |
+| Contact | Formspree, Web Speech API |
+| Optional AI | Cloudflare Workers, Workers AI, Durable Objects |
+| Hosting | Vercel |
+
+The main site is statically built and deployed; the optional message-polish service remains isolated from the browser bundle and contact-delivery provider.
+
+## Run locally
+
+Node.js 22.12.0 or newer is required.
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
-Open the local URL Astro prints in the terminal.
+Astro will print the local URL in the terminal. Copy `.env.example` to `.env.local` only if you want to test the configured contact delivery or optional message-polish endpoint; the portfolio remains browsable without those integrations.
 
-## Production check
-
-```bash
-npm run build
-npm run preview
-```
-
-## Personal links
-
-- GitHub: https://github.com/iampenuel
-- LinkedIn: https://www.linkedin.com/in/penuel-stanley-zebulon/
-
-## Important verse note
-
-The curated rotation uses five ESV references with the required Crossway digital copyright notice available through the verse widget’s “ESV Scripture attribution” control.
-
-## Main editing files
-
-- `src/components/PortfolioDesktop.tsx` — desktop, windows, and interactions
-- `src/styles/global.css` — all visual styling and responsive behavior
-- `src/data/projects.ts` — project folders and project detail content
-- `src/data/experience.ts` — experience, leadership, awards, and certifications
-- `src/data/verses.ts` — curated verse rotation
-- `public/assets/` — wallpaper, portraits, logos, and visual references
-- `public/resume/` — resume PDF
-
-## Embedded media easter egg
-
-The desktop includes a deliberately understated “Definitely Important” folder. Its QuickTime-style window lazily embeds the official YouTube upload through the privacy-enhanced player host; no copyrighted video or audio is downloaded, proxied, or stored in this repository. Playback begins at 0:42 and stops at the 1:00 mark, with an accessible click-to-play fallback when sound autoplay is blocked and an in-window recovery state if the player is unavailable. Keyboard controls, minimized-window pausing, responsive sizing, and reduced-motion preferences are supported.
-
-## Contact form
-
-The menu-bar Contact action opens an in-site macOS Mail-style compose window. Form submissions are delivered through Formspree using the build-time `PUBLIC_FORMSPREE_FORM_ID` value. Copy `.env.example` to `.env.local` and set the value locally; configure the same variable for Vercel Production, Preview, and Development builds. The form validates names, email, and message length without leaving the desktop, preserves drafts across window changes, includes a hidden spam honeypot, and keeps a direct-email fallback available when delivery fails.
-
-### Voice dictation and optional writing help
-
-The Message field progressively enhances supported browsers with the Web Speech API. Dictation starts only after the visitor presses **Dictate**, the same control stops listening, finalized transcript text is appended to the editable draft, and interim text remains a temporary preview. The site does not use `MediaRecorder`, create an audio file, upload audio, or retain an audio recording. Speech recognition may be unavailable or may be handled remotely by the browser vendor; unsupported and denied-permission states leave normal typing fully usable.
-
-The optional **Tidy message** menu sends only the Message text, the explicitly selected rewrite mode, and a random anonymous abuse-protection identifier to a separate Cloudflare Worker. First name, last name, email, other form fields, audio, IP addresses, and portfolio history are not included in the AI request or usage store. The Worker calls `@cf/google/gemma-4-26b-a4b-it` through a Workers AI binding named `AI`; no Cloudflare credential exists in browser code or Vercel.
-
-Every AI rewrite is a suggestion. The original remains visible and unchanged while the request runs and during review. Visitors can use, edit, reject, or undo a suggestion, and AI never submits the contact form. Only the final human-approved contact fields are sent through Formspree.
-
-The Worker lives in `workers/message-polisher/` and includes strict request validation, explicit CORS origins, response validation, a kill switch, a SQLite-backed Durable Object for exact UTC usage accounting, and Cloudflare rate-limit bindings for burst protection. It stores only anonymous salted hashes and counters. The global AI request cap is fixed at 200 successful requests per UTC day. The project is free-plan-only: Workers Paid, pay-as-you-go billing, and automatic paid fallbacks must not be enabled. On Workers Free, exhausted Workers AI or Durable Object allocations fail closed and the contact form continues without AI.
-
-Environment variables and secrets:
-
-- Portfolio build: `PUBLIC_FORMSPREE_FORM_ID` and the public `PUBLIC_AI_POLISH_ENDPOINT` URL ending in `/polish`.
-- Worker variable: `AI_POLISH_ENABLED=true`.
-- Worker secrets: `RATE_LIMIT_SALT` and `ADMIN_USAGE_TOKEN`. Never put these in Vercel, `.env.example`, source control, logs, or browser code.
-
-Validate and deploy the Worker only after confirming the Cloudflare account is on Workers Free and Workers Paid is disabled:
+For a production validation run:
 
 ```bash
-cd workers/message-polisher
-npm ci
 npm run check
-npx wrangler secret put RATE_LIMIT_SALT
-npx wrangler secret put ADMIN_USAGE_TOKEN
-npx wrangler deploy
+npm run build
 ```
 
-Set the resulting `/polish` URL as `PUBLIC_AI_POLISH_ENDPOINT` for Vercel Production, Preview, and Development, then trigger a new Vercel build because Astro embeds public variables at build time. For local frontend testing, put the public endpoint in the ignored `.env.local` file.
+## Project structure
 
-Disable AI polishing without changing source code by setting `AI_POLISH_ENABLED` to `false` in the Cloudflare dashboard under the Worker’s Variables and Secrets, or from `workers/message-polisher/` with:
-
-```bash
-npx wrangler deploy --var AI_POLISH_ENABLED:false
+```text
+src/                         Astro page, React desktop, content data, and styles
+public/                      Production images, icons, and résumé assets
+workers/message-polisher/   Optional server-side message-polish service and tests
 ```
 
-The kill switch prevents model calls and leaves typing, browser dictation, and Formspree submission available. Check the protected aggregate usage endpoint without exposing the token:
+## Privacy & safety
 
-```bash
-curl -H "Authorization: Bearer $ADMIN_USAGE_TOKEN" https://<worker-host>/admin/usage
-```
-
-AI limits, free-quota exhaustion, invalid responses, and model failures never replace or clear the visitor’s draft. Automated tests mock Workers AI and do not consume live quota.
-
-## Deployment
-
-This is a static Astro project and can be deployed to Vercel, Netlify, Cloudflare Pages, or GitHub Pages after updating `site` in `astro.config.mjs`.
+- The repository contains no production secrets; local values belong in ignored environment files.
+- Dictation is browser-provided, and this project does not record, store, or upload audio.
+- Message rewriting sends only the draft message and selected rewrite mode to the server-side integration; it never submits the contact form.
+- AI suggestions remain reviewable and editable, while server-side abuse controls and usage limits fail closed without blocking normal contact-form use.
