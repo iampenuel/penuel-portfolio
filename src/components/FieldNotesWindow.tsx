@@ -13,6 +13,7 @@ export function FieldNotesWindow({ selectedSlug, onSelectNote, onBackToIndex }: 
   const [copyStatus, setCopyStatus] = useState<'copied' | 'fallback' | null>(null);
   const articleRef = useRef<HTMLElement>(null);
   const selectedNote = publishedFieldNotes.find((note) => note.slug === selectedSlug) ?? null;
+  const noteCount = `${publishedFieldNotes.length} ${publishedFieldNotes.length === 1 ? 'note' : 'notes'}`;
 
   useEffect(() => {
     setCopyStatus(null);
@@ -33,10 +34,42 @@ export function FieldNotesWindow({ selectedSlug, onSelectNote, onBackToIndex }: 
 
   return (
     <div className={`field-notes-shell ${selectedNote ? 'reading-note' : 'browsing-notes'}`}>
+      <header className="field-notes-toolbar" aria-label="Field Notes toolbar">
+        <div className="field-notes-toolbar-library">
+          <span className="field-notes-toolbar-mark" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </span>
+          <span>
+            <strong>Field Notes</strong>
+            <small>{noteCount}</small>
+          </span>
+        </div>
+        <div className="field-notes-toolbar-note">
+          {selectedNote && (
+            <>
+              <span className="field-notes-toolbar-context">{selectedNote.week}</span>
+              <div className="field-notes-toolbar-actions">
+                <span className="field-note-copy-status" role="status" aria-live="polite">
+                  {copyStatus === 'copied' && 'Link copied.'}
+                  {copyStatus === 'fallback' && 'Copy manually below.'}
+                </span>
+                <button type="button" onClick={copyLink}>
+                  <svg viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M5.25 6.25h-1.5A1.75 1.75 0 0 0 2 8v4.25C2 13.22 2.78 14 3.75 14H8c.97 0 1.75-.78 1.75-1.75v-1.5M6.25 5.25v-1.5C6.25 2.78 7.03 2 8 2h4.25c.97 0 1.75.78 1.75 1.75V8c0 .97-.78 1.75-1.75 1.75h-1.5M8.5 7.5l4-4m-2.75 0H12.5v2.75" />
+                  </svg>
+                  <span>Copy link</span>
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </header>
+
       <aside className="field-notes-list" aria-label="Field Notes entries">
         <header className="field-notes-identity">
-          <span className="eyebrow">FIELD NOTES</span>
-          <h2>Field Notes</h2>
+          <h2>Notes</h2>
           <p>Things I’m learning, questioning, building, and trying not to forget.</p>
         </header>
         <nav aria-label="Published Field Notes">
@@ -48,9 +81,12 @@ export function FieldNotesWindow({ selectedSlug, onSelectNote, onBackToIndex }: 
               aria-current={selectedNote?.slug === note.slug ? 'page' : undefined}
               onClick={() => onSelectNote(note.slug)}
             >
-              <span className="field-note-week">{note.week}</span>
               <strong>{note.title}</strong>
-              <time>{note.date}</time>
+              <span className="field-note-list-meta">
+                <span className="field-note-week">{note.week}</span>
+                <time>{note.date}</time>
+              </span>
+              <span className="field-note-list-preview">{note.paragraphs[0]}</span>
               {selectedNote?.slug === note.slug && <span className="sr-only">Selected note</span>}
             </button>
           ))}
@@ -62,12 +98,16 @@ export function FieldNotesWindow({ selectedSlug, onSelectNote, onBackToIndex }: 
           <article ref={articleRef} tabIndex={-1} aria-labelledby="field-note-title">
             <button className="field-notes-back" type="button" onClick={onBackToIndex}>‹ Back to Field Notes</button>
             <header className="field-note-header">
-              <div>
-                <span>{selectedNote.week}</span>
-                <time>{selectedNote.date}</time>
-              </div>
+              <time>{selectedNote.date}</time>
+              <span>{selectedNote.week}</span>
               <h1 id="field-note-title">{selectedNote.title}</h1>
             </header>
+
+            {copyStatus === 'fallback' && (
+              <p className="field-note-copy-fallback">
+                Copy this URL: <a href={`${FIELD_NOTES_ORIGIN}/field-notes/${selectedNote.slug}`}>{FIELD_NOTES_ORIGIN}/field-notes/{selectedNote.slug}</a>
+              </p>
+            )}
 
             <aside className="field-note-pinned" aria-label="Pinned thought">
               <span>PINNED THOUGHT</span>
@@ -89,16 +129,6 @@ export function FieldNotesWindow({ selectedSlug, onSelectNote, onBackToIndex }: 
                 </div>
               </details>
             </section>
-
-            <footer className="field-note-actions">
-              <button type="button" onClick={copyLink}>Copy link</button>
-              <span className="field-note-copy-status" role="status" aria-live="polite">
-                {copyStatus === 'copied' && 'Link copied.'}
-                {copyStatus === 'fallback' && (
-                  <>Copy this URL: <a href={`${FIELD_NOTES_ORIGIN}/field-notes/${selectedNote.slug}`}>{FIELD_NOTES_ORIGIN}/field-notes/{selectedNote.slug}</a></>
-                )}
-              </span>
-            </footer>
           </article>
         ) : (
           <div className="field-note-empty">
