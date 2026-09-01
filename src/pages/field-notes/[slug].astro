@@ -1,0 +1,15 @@
+---
+import PortfolioPage from '../../layouts/PortfolioPage.astro';
+import { publishedFieldNotes } from '../../data/fieldNotes';
+
+export function getStaticPaths() {
+  return publishedFieldNotes.map((note) => ({
+    params: { slug: note.slug },
+    props: { slug: note.slug }
+  }));
+}
+
+const { slug } = Astro.props;
+---
+
+<PortfolioPage initialFieldNotesOpen initialFieldNoteSlug={slug} />
