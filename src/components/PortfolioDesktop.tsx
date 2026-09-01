@@ -40,10 +40,10 @@ const DESKTOP_ITEMS: DesktopItem[] = [
   { id: 'github', label: 'GitHub', column: 2, row: 0 },
   { id: 'about', label: 'About Me', column: 1, row: 1 },
   { id: 'linkedin', label: 'LinkedIn', column: 2, row: 1 },
-  { id: 'rickroll', label: 'Definitely Important', column: 2, row: 2 },
+  { id: 'field-notes', label: 'Field Notes', column: 2, row: 2 },
   { id: 'experience', label: 'Experience', column: 1, row: 2 },
   { id: 'resume', label: 'Resume', column: 1, row: 3 },
-  { id: 'field-notes', label: 'Field Notes', column: 1, row: 4, top: 580 }
+  { id: 'rickroll', label: 'Definitely Important', column: 2, row: 3 }
 ];
 
 const WINDOW_DEFAULTS: Record<WindowId, Omit<WindowState, 'z'>> = {
