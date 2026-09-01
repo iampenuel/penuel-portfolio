@@ -3,9 +3,14 @@ import { projects, type Project } from '../data/projects';
 import { awards, certifications, experience, leadership } from '../data/experience';
 import { verseForDate } from '../data/verses';
 import { ContactWindow } from './ContactWindow';
+import { FieldNotesWindow } from './FieldNotesWindow';
 import { RickrollPlayer } from './RickrollPlayer';
 
-type WindowId = 'intro' | 'about' | 'projects' | 'project-detail' | 'experience' | 'resume' | 'github' | 'linkedin' | 'rickroll' | 'contact';
+type WindowId = 'intro' | 'about' | 'projects' | 'project-detail' | 'experience' | 'resume' | 'github' | 'linkedin' | 'rickroll' | 'contact' | 'field-notes';
+type PortfolioDesktopProps = {
+  initialFieldNotesOpen?: boolean;
+  initialFieldNoteSlug?: string | null;
+};
 
 const ESV_COPYRIGHT_NOTICE = 'Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. ESV Text Edition: 2025. The ESV text may not be quoted in any publication made available to the public by a Creative Commons license. The ESV may not be translated in whole or in part into any other language. Used by permission. All rights reserved.';
 
@@ -27,6 +32,7 @@ type DesktopItem = {
   label: string;
   column: 1 | 2;
   row: number;
+  top?: number;
 };
 
 const DESKTOP_ITEMS: DesktopItem[] = [
@@ -36,7 +42,8 @@ const DESKTOP_ITEMS: DesktopItem[] = [
   { id: 'linkedin', label: 'LinkedIn', column: 2, row: 1 },
   { id: 'rickroll', label: 'Definitely Important', column: 2, row: 2 },
   { id: 'experience', label: 'Experience', column: 1, row: 2 },
-  { id: 'resume', label: 'Resume', column: 1, row: 3 }
+  { id: 'resume', label: 'Resume', column: 1, row: 3 },
+  { id: 'field-notes', label: 'Field Notes', column: 1, row: 4, top: 580 }
 ];
 
 const WINDOW_DEFAULTS: Record<WindowId, Omit<WindowState, 'z'>> = {
@@ -49,8 +56,25 @@ const WINDOW_DEFAULTS: Record<WindowId, Omit<WindowState, 'z'>> = {
   github: { id: 'github', title: 'GitHub', open: false, minimized: false, maximized: false, x: 520, y: 145, width: 650, height: 460 },
   linkedin: { id: 'linkedin', title: 'LinkedIn', open: false, minimized: false, maximized: false, x: 500, y: 125, width: 690, height: 500 },
   rickroll: { id: 'rickroll', title: 'Definitely Important.mov', open: false, minimized: false, maximized: false, x: 350, y: 90, width: 840, height: 600 },
-  contact: { id: 'contact', title: 'New Message', open: false, minimized: false, maximized: false, x: 430, y: 60, width: 720, height: 680 }
+  contact: { id: 'contact', title: 'New Message', open: false, minimized: false, maximized: false, x: 430, y: 60, width: 720, height: 680 },
+  'field-notes': { id: 'field-notes', title: 'Field Notes', open: false, minimized: false, maximized: false, x: 260, y: 54, width: 1020, height: 760 }
 };
+
+function createWindowState(fieldNotesOpen: boolean) {
+  return Object.fromEntries(Object.entries(WINDOW_DEFAULTS).map(([id, state], index) => [
+    id,
+    {
+      ...state,
+      open: id === 'intro' ? !fieldNotesOpen : id === 'field-notes' ? fieldNotesOpen : state.open,
+      z: 10 + index
+    }
+  ])) as Record<WindowId, WindowState>;
+}
+
+function fieldNotesStateFromPath(pathname: string) {
+  const match = pathname.match(/^\/field-notes(?:\/([^/]+))?\/?$/);
+  return { open: Boolean(match), slug: match?.[1] ?? null };
+}
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
@@ -243,7 +267,7 @@ function DesktopIcon({ item, selected, onSelect, onOpen }: { item: DesktopItem; 
   return (
     <button
       className={`desktop-icon ${selected ? 'selected' : ''}`}
-      style={{ '--desktop-column': item.column, '--desktop-row': item.row } as React.CSSProperties}
+      style={{ '--desktop-column': item.column, '--desktop-row': item.row, '--desktop-top': item.top ? `${item.top}px` : undefined } as React.CSSProperties}
       onClick={(event) => { event.stopPropagation(); onSelect(); }}
       onDoubleClick={(event) => { event.stopPropagation(); onOpen(); }}
       onKeyDown={(event) => { if (event.key === 'Enter') onOpen(); }}
@@ -501,14 +525,13 @@ function SocialProfile({ kind }: { kind: 'github' | 'linkedin' }) {
   );
 }
 
-export default function PortfolioDesktop() {
-  const [booting, setBooting] = useState(true);
+export default function PortfolioDesktop({ initialFieldNotesOpen = false, initialFieldNoteSlug = null }: PortfolioDesktopProps) {
+  const [booting, setBooting] = useState(!initialFieldNotesOpen);
   const [selectedIcon, setSelectedIcon] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [selectedFieldNote, setSelectedFieldNote] = useState<string | null>(initialFieldNoteSlug);
   const [zCounter, setZCounter] = useState(20);
-  const [windows, setWindows] = useState<Record<WindowId, WindowState>>(() => {
-    return Object.fromEntries(Object.entries(WINDOW_DEFAULTS).map(([id, state], index) => [id, { ...state, z: 10 + index }])) as Record<WindowId, WindowState>;
-  });
+  const [windows, setWindows] = useState<Record<WindowId, WindowState>>(() => createWindowState(initialFieldNotesOpen));
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [windowMenuOpen, setWindowMenuOpen] = useState(false);
   const [scriptureAttributionOpen, setScriptureAttributionOpen] = useState(false);
@@ -527,6 +550,24 @@ export default function PortfolioDesktop() {
     const timer = window.setTimeout(() => setBooting(false), 1350);
     return () => window.clearTimeout(timer);
   }, [reducedMotion]);
+
+  useEffect(() => {
+    const syncFieldNotesRoute = () => {
+      const route = fieldNotesStateFromPath(window.location.pathname);
+      setSelectedFieldNote(route.slug);
+      setWindows((current) => ({
+        ...current,
+        'field-notes': {
+          ...current['field-notes'],
+          open: route.open,
+          minimized: false
+        }
+      }));
+    };
+
+    window.addEventListener('popstate', syncFieldNotesRoute);
+    return () => window.removeEventListener('popstate', syncFieldNotesRoute);
+  }, []);
 
   useEffect(() => {
     const dialog = scriptureAttributionDialogRef.current;
@@ -558,6 +599,10 @@ export default function PortfolioDesktop() {
     setSelectedIcon(id);
     setContextMenu(null);
     setWindowMenuOpen(false);
+    if (id === 'field-notes' && !fieldNotesStateFromPath(window.location.pathname).open) {
+      setSelectedFieldNote(null);
+      window.history.pushState({ fieldNotes: 'index' }, '', '/field-notes');
+    }
   };
 
   const openProject = (project: Project) => {
@@ -570,7 +615,13 @@ export default function PortfolioDesktop() {
     }));
   };
 
-  const closeWindow = (id: WindowId) => updateWindow(id, { open: false, minimized: false });
+  const closeWindow = (id: WindowId) => {
+    updateWindow(id, { open: false, minimized: false });
+    if (id === 'field-notes' && fieldNotesStateFromPath(window.location.pathname).open) {
+      setSelectedFieldNote(null);
+      window.history.pushState({ fieldNotes: 'closed' }, '', '/');
+    }
+  };
   const closeContactWindow = () => {
     closeWindow('contact');
     window.requestAnimationFrame(() => contactTriggerRef.current?.focus());
@@ -581,8 +632,23 @@ export default function PortfolioDesktop() {
   const resetDesktop = () => {
     setSelectedIcon(null);
     setSelectedProject(null);
+    setSelectedFieldNote(null);
     setContextMenu(null);
-    setWindows(Object.fromEntries(Object.entries(WINDOW_DEFAULTS).map(([id, state], index) => [id, { ...state, open: id === 'intro', z: 10 + index }])) as Record<WindowId, WindowState>);
+    setWindows(createWindowState(false));
+    if (fieldNotesStateFromPath(window.location.pathname).open) {
+      window.history.pushState({ fieldNotes: 'closed' }, '', '/');
+    }
+  };
+
+  const selectFieldNote = (slug: string) => {
+    setSelectedFieldNote(slug);
+    const path = `/field-notes/${slug}`;
+    if (window.location.pathname !== path) window.history.pushState({ fieldNotes: slug }, '', path);
+  };
+
+  const showFieldNotesIndex = () => {
+    setSelectedFieldNote(null);
+    if (window.location.pathname !== '/field-notes') window.history.pushState({ fieldNotes: 'index' }, '', '/field-notes');
   };
 
   const handleContextMenu = (event: React.MouseEvent) => {
@@ -739,6 +805,13 @@ export default function PortfolioDesktop() {
             {id === 'resume' && <ResumeWindow />}
             {id === 'github' && <SocialProfile kind="github" />}
             {id === 'linkedin' && <SocialProfile kind="linkedin" />}
+            {id === 'field-notes' && (
+              <FieldNotesWindow
+                selectedSlug={selectedFieldNote}
+                onSelectNote={selectFieldNote}
+                onBackToIndex={showFieldNotesIndex}
+              />
+            )}
             {id === 'contact' && (
               <ContactWindow
                 closeRequest={contactCloseRequest}
