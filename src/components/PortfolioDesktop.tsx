@@ -424,7 +424,7 @@ function ProjectDetailWindow({ project }: { project: Project | null }) {
           <h2>{project.name}</h2>
           <p className="project-tagline">{project.tagline}</p>
         </div>
-        <img src={project.image ?? '/assets/folder.png'} alt={project.imageAlt ?? ''} />
+        {!project.hideHeaderImage && <img src={project.image ?? '/assets/folder.png'} alt={project.imageAlt ?? ''} />}
       </header>
       <div className="project-columns">
         <div className="project-story">
