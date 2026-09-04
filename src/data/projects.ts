@@ -1,3 +1,5 @@
+export type ProjectFolderGroup = 'AI Agents' | 'Data Engineering' | 'Medical Imaging' | 'Biosignals' | 'Healthcare Workflow';
+
 export type Project = {
   id: string;
   name: string;
@@ -11,11 +13,55 @@ export type Project = {
   boundaries: string[];
   repository: string;
   image?: string;
+  imageAlt?: string;
   liveDemo?: string;
-  folderGroup: 'AI Agents' | 'Data Engineering' | 'Medical Imaging' | 'Biosignals' | 'Healthcare Workflow';
+  liveDemoLabel?: string;
+  liveDemoPrimary?: boolean;
+  folderGroup: ProjectFolderGroup;
+  additionalFolderGroups?: ProjectFolderGroup[];
 };
 
 export const projects: Project[] = [
+  {
+    id: 'assera',
+    name: 'ASSERA',
+    category: 'Healthcare AI · Agent Systems · WebMCP',
+    tagline: 'A denial isn’t the final word.',
+    overview:
+      'ASSERA is a patient-side healthcare access platform that helps a person and their AI agent understand an insurance denial, identify what is missing, prepare the next step, and act together while consequential control remains human.',
+    problem:
+      'Prior-authorization denials can include policy language, documentation requirements, deadlines, and supporting records while still leaving patients unsure about what happened, what is missing, and what the next safe step should be.',
+    highlights: [
+      'A patient-side denial-navigation experience built around one fully synthetic prior-authorization case',
+      'Seven structured WebMCP website tools for reading case state, checking readiness, preparing an appeal package, previewing it, and performing simulation-only ACT',
+      'Deterministic case logic that blocks preparation when required human-supplied facts are missing',
+      'Human-only confirmation and exact-package approval; the AI agent has no approval tool',
+      'A simulation-only final action with an immutable synthetic receipt, idempotency, and no real insurer request'
+    ],
+    metrics: [
+      'Live-agent evaluation · 40 attempts · 40 / 40 correct tool selection · 39 / 40 correct arguments',
+      'Sequence and safety · 40 / 40 valid sequence · 40 / 40 no forbidden action',
+      'Journey result · 37 / 40 successful or correctly blocked',
+      'Small synthetic evaluation · not clinical validation'
+    ],
+    technologies: ['React', 'TypeScript', 'WebMCP', 'MCP', 'Human-in-the-loop', 'Agent Systems', 'Vite', 'Node.js'],
+    boundaries: [
+      'Uses only synthetic case data; no PHI or real patient data',
+      'Does not contact a real insurer or perform a real appeal submission',
+      'Does not determine medical necessity or predict appeal success',
+      'Does not provide medical or legal advice',
+      'Human approval is required before the simulation-only final action',
+      'Prototype / synthetic demonstration; not clinical validation or a production healthcare system'
+    ],
+    repository: 'https://github.com/iampenuel/assera',
+    image: '/assets/assera.png',
+    imageAlt: 'ASSERA flame logo',
+    liveDemo: 'https://assera-webmcp.stanleyzebulonp.chatgpt.site',
+    liveDemoLabel: 'Try ASSERA',
+    liveDemoPrimary: true,
+    folderGroup: 'AI Agents',
+    additionalFolderGroups: ['Healthcare Workflow']
+  },
   {
     id: 'sema',
     name: 'Sema',

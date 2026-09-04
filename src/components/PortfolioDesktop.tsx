@@ -336,7 +336,9 @@ function ProjectsWindow({ onOpenProject }: { onOpenProject: (project: Project) =
   });
   const group = navigation.history[navigation.index];
   const visible = projects.filter((project) => {
-    const matchesGroup = group === 'All Projects' || project.folderGroup === group;
+    const matchesGroup = group === 'All Projects'
+      || project.folderGroup === group
+      || project.additionalFolderGroups?.includes(group) === true;
     const haystack = `${project.name} ${project.category} ${project.tagline}`.toLowerCase();
     return matchesGroup && haystack.includes(query.toLowerCase());
   });
@@ -422,7 +424,7 @@ function ProjectDetailWindow({ project }: { project: Project | null }) {
           <h2>{project.name}</h2>
           <p className="project-tagline">{project.tagline}</p>
         </div>
-        <img src={project.image ?? '/assets/folder.png'} alt="" />
+        <img src={project.image ?? '/assets/folder.png'} alt={project.imageAlt ?? ''} />
       </header>
       <div className="project-columns">
         <div className="project-story">
@@ -435,8 +437,17 @@ function ProjectDetailWindow({ project }: { project: Project | null }) {
           <section><h3>Evidence</h3>{project.metrics.map((item) => <div className="metric" key={item}>{item}</div>)}</section>
           <section><h3>Technologies</h3><div className="tag-cloud">{project.technologies.map((item) => <span key={item}>{item}</span>)}</div></section>
           <section className="project-links">
-            <a className="primary-button compact" href={project.repository} target="_blank" rel="noreferrer">View GitHub</a>
-            {project.liveDemo && <a className="secondary-button compact" href={project.liveDemo} target="_blank" rel="noreferrer">Open live demo</a>}
+            {project.liveDemoPrimary && project.liveDemo ? (
+              <>
+                <a className="primary-button compact" href={project.liveDemo} target="_blank" rel="noreferrer">{project.liveDemoLabel ?? 'Open live demo'}</a>
+                <a className="secondary-button compact" href={project.repository} target="_blank" rel="noreferrer">View GitHub</a>
+              </>
+            ) : (
+              <>
+                <a className="primary-button compact" href={project.repository} target="_blank" rel="noreferrer">View GitHub</a>
+                {project.liveDemo && <a className="secondary-button compact" href={project.liveDemo} target="_blank" rel="noreferrer">{project.liveDemoLabel ?? 'Open live demo'}</a>}
+              </>
+            )}
           </section>
         </aside>
       </div>
