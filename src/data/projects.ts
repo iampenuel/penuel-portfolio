@@ -14,6 +14,7 @@ export type Project = {
   repository: string;
   image?: string;
   imageAlt?: string;
+  hideHeaderImage?: boolean;
   liveDemo?: string;
   liveDemoLabel?: string;
   liveDemoPrimary?: boolean;
@@ -56,6 +57,7 @@ export const projects: Project[] = [
     repository: 'https://github.com/iampenuel/assera',
     image: '/assets/assera.png',
     imageAlt: 'ASSERA flame logo',
+    hideHeaderImage: true,
     liveDemo: 'https://assera-webmcp.stanleyzebulonp.chatgpt.site',
     liveDemoLabel: 'Try ASSERA',
     liveDemoPrimary: true,
