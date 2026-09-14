@@ -18,6 +18,7 @@ type YouTubePlayer = {
   pauseVideo: () => void;
   playVideo: () => void;
   setVolume: (volume: number) => void;
+  unMute: () => void;
   stopVideo: () => void;
 };
 
@@ -33,7 +34,7 @@ type YouTubeNamespace = {
     events: {
       onReady: (event: YouTubeEvent) => void;
       onStateChange: (event: YouTubeEvent) => void;
-      onError: () => void;
+      onError: (event: YouTubeEvent) => void;
       onAutoplayBlocked: () => void;
     };
   }) => YouTubePlayer;
@@ -270,7 +271,10 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 
             }
             if (data === api.PlayerState.ENDED) completeSegment();
           },
-          onError: () => {
+          onError: ({ data }) => {
+            if (import.meta.env.DEV || ['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+              console.warn('YouTube embed error (not autoplay blocking):', data);
+            }
             if (!mountedRef.current) return;
             destroyPlayer();
             setPhase('error');
@@ -284,7 +288,10 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 
         }
       });
       playerRef.current = player;
-    }).catch(() => {
+    }).catch((error) => {
+      if (import.meta.env.DEV || ['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+        console.warn('YouTube IFrame API/network loading failed:', error);
+      }
       if (!cancelled && mountedRef.current) {
         setPhase('error');
         setStatus('The YouTube player could not be loaded.');
@@ -300,6 +307,8 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 
     setShowPlayFallback(false);
     setNeedsResume(false);
     setStatus('Attempting playback.');
+    // Keep these calls synchronous with the visitor's tap for iPhone/Safari.
+    player.unMute();
     player.setVolume(40);
     player.playVideo();
     schedulePlayFallback();

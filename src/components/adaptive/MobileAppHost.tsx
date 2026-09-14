@@ -53,7 +53,7 @@ export function MobileAppHost({ appId, route, onHome, onNavigate, onOpenApp, isA
         {appId === 'experience' && <ExperienceWindow />}
         {appId === 'field-notes' && <FieldNotesWindow idPrefix="mobile" selectedSlug={route.fieldNoteSlug} onSelectNote={(slug) => onNavigate(fieldNotePath(slug))} onBackToIndex={() => onNavigate(fieldNotePath())} />}
         {appId === 'contact' && <ContactWindow idPrefix="mobile" closeRequest={contactCloseRequest} minimized={!isActive} onClose={onHome} />}
-        {appId === 'definitely-important' && <RickrollPlayer idPrefix="mobile" minimized={!isActive} reducedMotion={reducedMotion} onClose={onHome} playLabel="Play video" />}
+        {appId === 'definitely-important' && <RickrollPlayer idPrefix="mobile" minimized={!isActive} reducedMotion={reducedMotion} onClose={onHome} playLabel="Tap to open file" />}
       </div>
     </section>
   );
