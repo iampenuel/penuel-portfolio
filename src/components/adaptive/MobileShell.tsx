@@ -1,17 +1,46 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { portfolioApps, type PortfolioAppId } from '../../data/portfolioApps';
+import { publishedFieldNotes } from '../../data/fieldNotes';
+import { verseForDate } from '../../data/verses';
+import { fieldNotePath } from '../../lib/portfolioRoutes';
 import type { PortfolioRoute } from '../../lib/portfolioRoutes';
-import { MobileIcon } from './MobileIcon';
-import { ShellAppHost } from './ShellAppHost';
+import { MobileAppHost } from './MobileAppHost';
+import { MobileAppLibrary } from './MobileAppLibrary';
+import { MobileHomeScreen } from './MobileHomeScreen';
+import { MobileStatusBar } from './MobileStatusBar';
+
+function isSameLocalMinute(first: Date, second: Date) {
+  return first.getFullYear() === second.getFullYear()
+    && first.getMonth() === second.getMonth()
+    && first.getDate() === second.getDate()
+    && first.getHours() === second.getHours()
+    && first.getMinutes() === second.getMinutes();
+}
 
 export function MobileShell({ route, onNavigate }: { route: PortfolioRoute; onNavigate: (pathname: string) => void }) {
   const [previewAppId, setPreviewAppId] = useState<PortfolioAppId | null>(route.appId);
+  const [homePage, setHomePage] = useState<0 | 1>(0);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [now, setNow] = useState<Date | null>(null);
+  const latestNote = publishedFieldNotes[0] ?? null;
+  const verse = useMemo(() => now ? verseForDate(now) : null, [now]);
 
   useEffect(() => {
     setPreviewAppId(route.appId);
   }, [route.appId, route.pathname]);
 
+  useEffect(() => {
+    const syncNow = () => {
+      const next = new Date();
+      setNow((current) => current && isSameLocalMinute(current, next) ? current : next);
+    };
+    syncNow();
+    const timer = window.setInterval(syncNow, 1_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const openApp = (app: (typeof portfolioApps)[number]) => {
+    setLibraryOpen(false);
     if (app.route) {
       onNavigate(app.route);
       return;
@@ -21,24 +50,29 @@ export function MobileShell({ route, onNavigate }: { route: PortfolioRoute; onNa
 
   const goHome = () => {
     if (route.appId) onNavigate('/');
-    else setPreviewAppId(null);
+    else {
+      setPreviewAppId(null);
+      setLibraryOpen(false);
+    }
   };
 
   return (
-    <main className="mobile-shell" aria-label="iOS-inspired mobile portfolio scaffold">
+    <main className="mobile-shell" aria-label="Penuel's mobile portfolio">
+      <MobileStatusBar now={now} />
       {previewAppId ? (
-        <ShellAppHost appId={previewAppId} route={route} shellLabel="Mobile" onHome={goHome} />
+        <MobileAppHost appId={previewAppId} route={route} onHome={goHome} />
+      ) : libraryOpen ? (
+        <MobileAppLibrary onHome={() => setLibraryOpen(false)} onOpenApp={openApp} />
       ) : (
-        <div className="mobile-home">
-          <header className="adaptive-shell-heading">
-            <span className="adaptive-shell-kicker">Compact shell · Phase 1</span>
-            <h1>Penuel</h1>
-            <p>The shared portfolio is ready for its mobile presentation.</p>
-          </header>
-          <nav className="mobile-home-grid" aria-label="Portfolio apps">
-            {portfolioApps.map((app) => <MobileIcon key={app.id} app={app} onOpen={() => openApp(app)} />)}
-          </nav>
-        </div>
+        <MobileHomeScreen
+          activePage={homePage}
+          verse={verse}
+          latestNote={latestNote}
+          onPageChange={setHomePage}
+          onOpenApp={openApp}
+          onOpenLatestNote={() => onNavigate(fieldNotePath(latestNote?.slug))}
+          onOpenLibrary={() => setLibraryOpen(true)}
+        />
       )}
     </main>
   );
