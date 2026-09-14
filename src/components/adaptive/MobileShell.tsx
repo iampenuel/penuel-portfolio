@@ -21,11 +21,30 @@ export function MobileShell({ route, onNavigate }: { route: PortfolioRoute; onNa
   const [homePage, setHomePage] = useState<MobileHomePage>(0);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [now, setNow] = useState<Date | null>(null);
+  const [isActive, setIsActive] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
   const verse = useMemo(() => now ? adaptiveVerseForReference(verseForDate(now).reference) : null, [now]);
 
   useEffect(() => {
     setPreviewAppId(route.appId);
   }, [route.appId, route.pathname]);
+
+  useEffect(() => {
+    const phone = window.matchMedia('(max-width: 767px)');
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const sync = () => {
+      const override = document.documentElement.dataset.portfolioShellOverride;
+      setIsActive(override ? override === 'mobile' : phone.matches);
+      setReducedMotion(motion.matches);
+    };
+    sync();
+    phone.addEventListener('change', sync);
+    motion.addEventListener('change', sync);
+    return () => {
+      phone.removeEventListener('change', sync);
+      motion.removeEventListener('change', sync);
+    };
+  }, []);
 
   useEffect(() => {
     const syncNow = () => {
@@ -58,7 +77,7 @@ export function MobileShell({ route, onNavigate }: { route: PortfolioRoute; onNa
     <main className="mobile-shell" aria-label="Penuel's mobile portfolio">
       <MobileStatusBar now={now} />
       {previewAppId ? (
-        <MobileAppHost appId={previewAppId} route={route} onHome={goHome} />
+        <MobileAppHost key={previewAppId} appId={previewAppId} route={route} onHome={goHome} onNavigate={onNavigate} onOpenApp={setPreviewAppId} isActive={isActive} reducedMotion={reducedMotion} />
       ) : libraryOpen ? (
         <MobileAppLibrary onHome={() => setLibraryOpen(false)} onOpenApp={openApp} />
       ) : (

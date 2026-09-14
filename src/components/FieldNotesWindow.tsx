@@ -5,11 +5,13 @@ const FIELD_NOTES_ORIGIN = 'https://iampenuel.vercel.app';
 
 type FieldNotesWindowProps = {
   selectedSlug: string | null;
+  idPrefix?: string;
   onSelectNote: (slug: string) => void;
   onBackToIndex: () => void;
 };
 
-export function FieldNotesWindow({ selectedSlug, onSelectNote, onBackToIndex }: FieldNotesWindowProps) {
+export function FieldNotesWindow({ selectedSlug, onSelectNote, onBackToIndex, idPrefix = '' }: FieldNotesWindowProps) {
+  const scopedId = (id: string) => idPrefix ? `${idPrefix}-${id}` : id;
   const [copyStatus, setCopyStatus] = useState<'copied' | 'fallback' | null>(null);
   const articleRef = useRef<HTMLElement>(null);
   const selectedNote = publishedFieldNotes.find((note) => note.slug === selectedSlug) ?? null;
@@ -95,12 +97,12 @@ export function FieldNotesWindow({ selectedSlug, onSelectNote, onBackToIndex }: 
 
       <section className="field-note-reader" aria-label="Field Note reader">
         {selectedNote ? (
-          <article ref={articleRef} tabIndex={-1} aria-labelledby="field-note-title">
+          <article ref={articleRef} tabIndex={-1} aria-labelledby={scopedId('field-note-title')}>
             <button className="field-notes-back" type="button" onClick={onBackToIndex}>‹ Back to Field Notes</button>
             <header className="field-note-header">
               <time>{selectedNote.date}</time>
               <span>{selectedNote.week}</span>
-              <h1 id="field-note-title">{selectedNote.title}</h1>
+              <h1 id={scopedId('field-note-title')}>{selectedNote.title}</h1>
             </header>
 
             {copyStatus === 'fallback' && (
@@ -118,8 +120,8 @@ export function FieldNotesWindow({ selectedSlug, onSelectNote, onBackToIndex }: 
               {selectedNote.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
             </div>
 
-            <section className="field-note-ai-use" aria-labelledby="field-note-ai-heading">
-              <h2 id="field-note-ai-heading">AI USE</h2>
+            <section className="field-note-ai-use" aria-labelledby={scopedId('field-note-ai-heading')}>
+              <h2 id={scopedId('field-note-ai-heading')}>AI USE</h2>
               <p>{selectedNote.aiUseNote}</p>
               <details>
                 <summary>View prompt</summary>

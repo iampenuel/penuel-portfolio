@@ -91,7 +91,7 @@ export function MobileHomeScreen({
         <section className="mobile-home-page mobile-home-page--portfolio" aria-label="Home Screen page 1 of 2">
           <nav className="mobile-primary-grid" aria-label="Portfolio apps">
             {primaryApps.map((app) => (
-              <MobileIcon key={app.id} app={app} onOpen={() => onOpenApp(app)} />
+              <MobileIcon key={app.id} app={app} directExternal onOpen={() => onOpenApp(app)} />
             ))}
           </nav>
           <ResumePreviewWidget onOpen={() => onOpenApp(portfolioAppById.resume)} />

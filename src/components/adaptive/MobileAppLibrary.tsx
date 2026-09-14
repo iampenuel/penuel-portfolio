@@ -56,7 +56,7 @@ export function MobileAppLibrary({
               <h2 id={`mobile-library-${group.id}`}>{group.label}</h2>
               <div className="mobile-library-grid">
                 {apps.map((app) => (
-                  <MobileIcon key={app.id} app={app} variant="library" onOpen={() => onOpenApp(app)} />
+                  <MobileIcon key={app.id} app={app} variant="library" directExternal onOpen={() => onOpenApp(app)} />
                 ))}
               </div>
             </section>

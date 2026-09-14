@@ -99,7 +99,8 @@ function loadYouTubeApi() {
   return youtubeApiPromise;
 }
 
-export function RickrollPlayer({ minimized, reducedMotion, onClose }: { minimized: boolean; reducedMotion: boolean; onClose: () => void }) {
+export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 'Fine. Click to continue.', idPrefix = '' }: { minimized: boolean; reducedMotion: boolean; onClose: () => void; playLabel?: string; idPrefix?: string }) {
+  const descriptionId = `${idPrefix ? `${idPrefix}-` : ''}rickroll-description`;
   const [phase, setPhase] = useState<PlayerPhase>('loading');
   const [playerReady, setPlayerReady] = useState(false);
   const [showPlayFallback, setShowPlayFallback] = useState(false);
@@ -313,8 +314,8 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose }: { minimize
   };
 
   return (
-    <div className={`quicktime-player ${reducedMotion ? 'reduced-motion' : ''}`} aria-describedby="rickroll-description">
-      <p id="rickroll-description" className="sr-only">This QuickTime-style window contains an embedded official YouTube video with playback controls.</p>
+    <div className={`quicktime-player ${reducedMotion ? 'reduced-motion' : ''}`} aria-describedby={descriptionId}>
+      <p id={descriptionId} className="sr-only">This QuickTime-style window contains an embedded official YouTube video with playback controls.</p>
       <span className="sr-only" aria-live="polite">{status}</span>
 
       {phase === 'loading' && (
@@ -331,7 +332,7 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose }: { minimize
           {showRickroll && phase !== 'ended' && <div className="rickroll-toast">Yep, you’ve been rickrolled, LOL.</div>}
           {(showPlayFallback || needsResume) && phase !== 'ended' && (
             <button className="player-action-overlay" type="button" onClick={playFromFallback}>
-              {needsResume ? 'Resume' : 'Fine. Click to continue.'}
+              {needsResume ? 'Resume' : playLabel}
             </button>
           )}
           {phase === 'ended' && (

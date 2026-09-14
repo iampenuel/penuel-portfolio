@@ -19,6 +19,7 @@ import {
   scrollTopToRevealStart,
   undoAiSuggestion
 } from '../lib/contactAssistant';
+import { submitContact } from '../lib/contactSubmission';
 
 const FORMSPREE_FORM_ID = import.meta.env.PUBLIC_FORMSPREE_FORM_ID?.trim();
 const FORMSPREE_ENDPOINT = FORMSPREE_FORM_ID ? `https://formspree.io/f/${FORMSPREE_FORM_ID}` : null;
@@ -149,12 +150,15 @@ function speechConstructor() {
 export function ContactWindow({
   closeRequest,
   minimized,
-  onClose
+  onClose,
+  idPrefix = ''
 }: {
   closeRequest: number;
   minimized: boolean;
   onClose: () => void;
+  idPrefix?: string;
 }) {
+  const scopedId = (ids: string) => ids.split(' ').map((id) => idPrefix ? `${idPrefix}-${id}` : id).join(' ');
   const [values, setValues] = useState<ContactValues>(EMPTY_FORM);
   const [errors, setErrors] = useState<ContactErrors>({});
   const [submitState, setSubmitState] = useState<SubmitState>('idle');
@@ -676,21 +680,7 @@ export function ContactWindow({
     submittingRef.current = true;
     setSubmitState('sending');
     try {
-      const body = new FormData();
-      body.append('First name', trimmed.firstName);
-      body.append('Last name', trimmed.lastName);
-      body.append('Email', trimmed.email);
-      body.append('Message', trimmed.message);
-      body.append('_replyto', trimmed.email);
-      body.append('_subject', 'New message from Penuel’s portfolio');
-      body.append('Source', 'Penuel Portfolio Contact');
-
-      const response = await fetch(FORMSPREE_ENDPOINT, {
-        method: 'POST',
-        body,
-        headers: { Accept: 'application/json' }
-      });
-      if (!response.ok) throw new Error('Formspree rejected the contact submission.');
+      await submitContact(FORMSPREE_ENDPOINT, trimmed);
       completeSubmission();
     } catch (caught) {
       if (import.meta.env.DEV) console.error('Portfolio contact submission failed.', caught);
@@ -762,10 +752,10 @@ export function ContactWindow({
 
         <div className="contact-name-row">
           <div className="contact-field">
-            <label htmlFor="contact-first-name">First name</label>
+            <label htmlFor={scopedId('contact-first-name')}>First name</label>
             <input
               ref={firstNameRef}
-              id="contact-first-name"
+              id={scopedId('contact-first-name')}
               name="First name"
               type="text"
               autoComplete="given-name"
@@ -774,16 +764,16 @@ export function ContactWindow({
               maxLength={60}
               value={values.firstName}
               aria-invalid={Boolean(errors.firstName)}
-              aria-describedby={errors.firstName ? 'contact-first-name-error' : undefined}
+              aria-describedby={errors.firstName ? scopedId('contact-first-name-error') : undefined}
               onChange={(event) => updateField('firstName', event.target.value)}
             />
-            {errors.firstName && <span id="contact-first-name-error" className="contact-field-error">{errors.firstName}</span>}
+            {errors.firstName && <span id={scopedId('contact-first-name-error')} className="contact-field-error">{errors.firstName}</span>}
           </div>
           <div className="contact-field">
-            <label htmlFor="contact-last-name">Last name</label>
+            <label htmlFor={scopedId('contact-last-name')}>Last name</label>
             <input
               ref={lastNameRef}
-              id="contact-last-name"
+              id={scopedId('contact-last-name')}
               name="Last name"
               type="text"
               autoComplete="family-name"
@@ -792,18 +782,18 @@ export function ContactWindow({
               maxLength={60}
               value={values.lastName}
               aria-invalid={Boolean(errors.lastName)}
-              aria-describedby={errors.lastName ? 'contact-last-name-error' : undefined}
+              aria-describedby={errors.lastName ? scopedId('contact-last-name-error') : undefined}
               onChange={(event) => updateField('lastName', event.target.value)}
             />
-            {errors.lastName && <span id="contact-last-name-error" className="contact-field-error">{errors.lastName}</span>}
+            {errors.lastName && <span id={scopedId('contact-last-name-error')} className="contact-field-error">{errors.lastName}</span>}
           </div>
         </div>
 
         <div className="contact-field">
-          <label htmlFor="contact-email">Email</label>
+          <label htmlFor={scopedId('contact-email')}>Email</label>
           <input
             ref={emailRef}
-            id="contact-email"
+            id={scopedId('contact-email')}
             name="Email"
             type="email"
             inputMode="email"
@@ -813,18 +803,18 @@ export function ContactWindow({
             maxLength={254}
             value={values.email}
             aria-invalid={Boolean(errors.email)}
-            aria-describedby={errors.email ? 'contact-email-error' : undefined}
+            aria-describedby={errors.email ? scopedId('contact-email-error') : undefined}
             onChange={(event) => updateField('email', event.target.value)}
           />
-          {errors.email && <span id="contact-email-error" className="contact-field-error">{errors.email}</span>}
+          {errors.email && <span id={scopedId('contact-email-error')} className="contact-field-error">{errors.email}</span>}
         </div>
 
         <div className="contact-field contact-message-field">
-          <label htmlFor="contact-message">Message</label>
+          <label htmlFor={scopedId('contact-message')}>Message</label>
           <div className={`contact-editor${errors.message ? ' invalid' : ''}`}>
             <textarea
               ref={messageRef}
-              id="contact-message"
+              id={scopedId('contact-message')}
               name="Message"
               placeholder="What would you like to talk about?"
               required
@@ -833,7 +823,7 @@ export function ContactWindow({
               rows={7}
               value={values.message}
               aria-invalid={Boolean(errors.message)}
-              aria-describedby={`contact-message-count contact-voice-privacy${errors.message ? ' contact-message-error' : ''}`}
+              aria-describedby={scopedId(`contact-message-count contact-voice-privacy${errors.message ? ' contact-message-error' : ''}`)}
               onChange={(event) => updateField('message', event.target.value)}
             />
             <div ref={messageToolbarRef} className="contact-editor-toolbar">
@@ -842,7 +832,7 @@ export function ContactWindow({
                   className={`contact-toolbar-button contact-dictation-toggle${isListening ? ' listening' : ''}`}
                   type="button"
                   aria-label={dictationControl.accessibleLabel}
-                  aria-describedby="contact-voice-privacy"
+                  aria-describedby={scopedId('contact-voice-privacy')}
                   aria-pressed={isListening}
                   disabled={voiceSupported !== true}
                   title={dictationControl.accessibleLabel}
@@ -859,7 +849,7 @@ export function ContactWindow({
                   disabled={tidyDisabled}
                   aria-expanded={modeMenuOpen}
                   aria-haspopup="menu"
-                  aria-controls="contact-tidy-menu"
+                  aria-controls={scopedId('contact-tidy-menu')}
                   onClick={() => setModeMenuOpen((current) => !current)}
                 >
                   <PencilIcon />
@@ -872,7 +862,7 @@ export function ContactWindow({
                 {modeMenuOpen && (
                   <div
                     ref={modeMenuRef}
-                    id="contact-tidy-menu"
+                    id={scopedId('contact-tidy-menu')}
                     className="contact-tidy-menu"
                     role="menu"
                     aria-label="Tidy message options"
@@ -892,12 +882,12 @@ export function ContactWindow({
                   </div>
                 )}
               </div>
-              <span id="contact-message-count" className="contact-character-count">{values.message.length} / 2000</span>
+              <span id={scopedId('contact-message-count')} className="contact-character-count">{values.message.length} / 2000</span>
             </div>
           </div>
 
-          {errors.message && <span id="contact-message-error" className="contact-field-error">{errors.message}</span>}
-          <p id="contact-voice-privacy" className="contact-privacy-note">Your browser handles dictation. This site keeps only the text.</p>
+          {errors.message && <span id={scopedId('contact-message-error')} className="contact-field-error">{errors.message}</span>}
+          <p id={scopedId('contact-voice-privacy')} className="contact-privacy-note">Your browser handles dictation. This site keeps only the text.</p>
 
           {(voiceStatus || interimTranscript) && (
             <div className="contact-dictation-feedback" aria-live="polite" aria-atomic="true">
@@ -925,18 +915,18 @@ export function ContactWindow({
         </div>
 
         {reviewOpen && (
-          <section ref={suggestionReviewRef} id="contact-writing-assistant" className="contact-suggestion-review" aria-labelledby="contact-suggestion-title">
+          <section ref={suggestionReviewRef} id={scopedId('contact-writing-assistant')} className="contact-suggestion-review" aria-labelledby={scopedId('contact-suggestion-title')}>
             <div className="contact-suggestion-heading">
-              <h3 id="contact-suggestion-title" ref={suggestionHeadingRef} tabIndex={-1}>Suggested edit</h3>
+              <h3 id={scopedId('contact-suggestion-title')} ref={suggestionHeadingRef} tabIndex={-1}>Suggested edit</h3>
               <p>Review it before using it.</p>
             </div>
             <div className="contact-suggestion-grid">
-              <section className="contact-version" aria-labelledby="contact-original-label">
-                <h4 id="contact-original-label">Original</h4>
+              <section className="contact-version" aria-labelledby={scopedId('contact-original-label')}>
+                <h4 id={scopedId('contact-original-label')}>Original</h4>
                 <div className="contact-version-copy">{preAiOriginal}</div>
               </section>
-              <section className="contact-version contact-suggested-version" aria-labelledby="contact-suggested-label">
-                <h4 id="contact-suggested-label">Suggested</h4>
+              <section className="contact-version contact-suggested-version" aria-labelledby={scopedId('contact-suggested-label')}>
+                <h4 id={scopedId('contact-suggested-label')}>Suggested</h4>
                 <textarea
                   className="contact-suggestion-editor"
                   aria-label="Suggested message"
@@ -965,8 +955,8 @@ export function ContactWindow({
         )}
 
         <div className="contact-honeypot" role="none" aria-hidden="true" hidden>
-          <label htmlFor="contact-website" aria-hidden="true">Website</label>
-          <input id="contact-website" name="_gotcha" type="text" tabIndex={-1} autoComplete="off" aria-hidden="true" value={values.website} onChange={(event) => updateField('website', event.target.value)} />
+          <label htmlFor={scopedId('contact-website')} aria-hidden="true">Website</label>
+          <input id={scopedId('contact-website')} name="_gotcha" type="text" tabIndex={-1} autoComplete="off" aria-hidden="true" value={values.website} onChange={(event) => updateField('website', event.target.value)} />
         </div>
 
         <div className="contact-submit-row">
@@ -988,8 +978,8 @@ export function ContactWindow({
           className="contact-discard-backdrop"
           role="alertdialog"
           aria-modal="true"
-          aria-labelledby="contact-discard-title"
-          aria-describedby="contact-discard-description"
+          aria-labelledby={scopedId('contact-discard-title')}
+          aria-describedby={scopedId('contact-discard-description')}
           onKeyDown={(event) => {
             if (event.key !== 'Escape') return;
             event.preventDefault();
@@ -998,8 +988,8 @@ export function ContactWindow({
           }}
         >
           <div className="contact-discard-card">
-            <h2 id="contact-discard-title">Discard this message?</h2>
-            <p id="contact-discard-description">Your draft will be deleted.</p>
+            <h2 id={scopedId('contact-discard-title')}>Discard this message?</h2>
+            <p id={scopedId('contact-discard-description')}>Your draft will be deleted.</p>
             <div className="contact-state-actions">
               <button ref={keepWritingRef} className="primary-button compact" type="button" onClick={keepWriting}>Keep writing</button>
               <button className="secondary-button compact contact-discard-action" type="button" onClick={closeAndClear}>Discard</button>
