@@ -13,7 +13,7 @@ export function MobileResumeApp({ onHome }: { onHome: () => void }) {
       </div>
       <p className="mobile-resume-document-meta">{resumeDocument.name} · 1 page</p>
       <a className="mobile-resume-document" href={resumeDocument.url} target="_blank" rel="noopener noreferrer" aria-label="Open full resume PDF in a new tab">
-        <img src={resumeDocument.preview} alt={resumeDocument.previewAlt} width="1313" height="1700" />
+        <img src={resumeDocument.preview} alt={resumeDocument.previewAlt} width={resumeDocument.previewWidth} height={resumeDocument.previewHeight} />
       </a>
       <p className="mobile-resume-document-hint">Open PDF for the full document viewer and zoom controls.</p>
     </section>

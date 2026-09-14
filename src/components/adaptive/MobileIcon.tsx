@@ -1,12 +1,9 @@
 import { portfolioApps } from '../../data/portfolioApps';
-import { TemporaryContactIcon } from './TemporaryContactIcon';
 
 type PortfolioApp = (typeof portfolioApps)[number];
 
 export function MobileAppArtwork({ app }: { app: PortfolioApp }) {
-  return app.icon.kind === 'asset'
-    ? <img src={app.icon.src} alt="" draggable={false} />
-    : <TemporaryContactIcon />;
+  return <img className="mobile-app-artwork" src={app.icon.src} alt="" draggable={false} />;
 }
 
 export function MobileIcon({

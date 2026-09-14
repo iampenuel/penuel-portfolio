@@ -1,7 +1,9 @@
-/** Reuse the existing PDF and its cached first-page render; never maintain a second resume. */
+/** The supplied adaptive-shell PDF and its render; desktop's existing document stays untouched. */
 export const resumeDocument = {
-  url: '/resume/Penuel_Stanley-Zebulon_Resume.pdf',
-  preview: '/assets/resume-preview.png',
+  url: '/assets/mobile/resume/Penuel_Stanley-Zebulon_Resume.pdf',
+  preview: '/assets/mobile/resume/preview.png',
+  previewWidth: 1313,
+  previewHeight: 1700,
   name: 'Penuel Stanley-Zebulon',
   previewAlt: "First page of Penuel Stanley-Zebulon's resume"
 } as const;

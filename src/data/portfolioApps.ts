@@ -20,9 +20,7 @@ export type DesktopAppWindowId =
   | 'linkedin'
   | 'rickroll';
 
-type AppIcon =
-  | { kind: 'asset'; src: string }
-  | { kind: 'temporary-contact' };
+type AppIcon = { kind: 'asset'; src: string };
 
 type ShellBehavior = 'app' | 'external-link' | 'media';
 export type MobileLibraryGroup = 'work' | 'personal' | 'connect';
@@ -108,7 +106,7 @@ export const portfolioApps: readonly PortfolioAppDefinition[] = [
   {
     id: 'contact',
     label: 'Contact',
-    icon: { kind: 'temporary-contact' },
+    icon: { kind: 'asset', src: '/assets/mobile/icons/contact.png' },
     destination: 'internal',
     route: null,
     mobileSummary: 'A direct place to start a conversation with Penuel.',
