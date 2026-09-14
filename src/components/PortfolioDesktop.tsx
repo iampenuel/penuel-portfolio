@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { projects, type Project } from '../data/projects';
-import { awards, certifications, experience, leadership } from '../data/experience';
+import { AboutWindow, ProjectDetailWindow, ExperienceWindow } from './PortfolioContent';
+import { portfolioApps, type DesktopAppWindowId } from '../data/portfolioApps';
 import { verseForDate } from '../data/verses';
+import { fieldNotePath, isFieldNotesRoute, type PortfolioRoute } from '../lib/portfolioRoutes';
 import { ContactWindow } from './ContactWindow';
 import { FieldNotesWindow } from './FieldNotesWindow';
 import { RickrollPlayer } from './RickrollPlayer';
 
-type WindowId = 'intro' | 'about' | 'projects' | 'project-detail' | 'experience' | 'resume' | 'github' | 'linkedin' | 'rickroll' | 'contact' | 'field-notes';
+type WindowId = 'intro' | 'project-detail' | DesktopAppWindowId;
 type PortfolioDesktopProps = {
-  initialFieldNotesOpen?: boolean;
-  initialFieldNoteSlug?: string | null;
+  route: PortfolioRoute;
+  onNavigate: (pathname: string) => void;
 };
 
 const ESV_COPYRIGHT_NOTICE = 'Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. ESV Text Edition: 2025. The ESV text may not be quoted in any publication made available to the public by a Creative Commons license. The ESV may not be translated in whole or in part into any other language. Used by permission. All rights reserved.';
@@ -35,16 +37,16 @@ type DesktopItem = {
   top?: number;
 };
 
-const DESKTOP_ITEMS: DesktopItem[] = [
-  { id: 'projects', label: 'Projects', column: 1, row: 0 },
-  { id: 'github', label: 'GitHub', column: 2, row: 0 },
-  { id: 'about', label: 'About Me', column: 1, row: 1 },
-  { id: 'linkedin', label: 'LinkedIn', column: 2, row: 1 },
-  { id: 'field-notes', label: 'Field Notes', column: 2, row: 2 },
-  { id: 'experience', label: 'Experience', column: 1, row: 2 },
-  { id: 'resume', label: 'Resume', column: 1, row: 3 },
-  { id: 'rickroll', label: 'Definitely Important', column: 2, row: 3 }
-];
+const DESKTOP_ITEMS: DesktopItem[] = portfolioApps
+  .flatMap((app) => app.desktop.homePosition ? [{
+    id: app.desktop.windowId,
+    label: app.label,
+    column: app.desktop.homePosition.column,
+    row: app.desktop.homePosition.row,
+    order: app.desktop.homePosition.order
+  }] : [])
+  .sort((first, second) => first.order - second.order)
+  .map(({ order: _order, ...item }) => item);
 
 const WINDOW_DEFAULTS: Record<WindowId, Omit<WindowState, 'z'>> = {
   intro: { id: 'intro', title: 'Welcome', open: true, minimized: false, maximized: false, x: 450, y: 150, width: 610, height: 400 },
@@ -69,11 +71,6 @@ function createWindowState(fieldNotesOpen: boolean) {
       z: 10 + index
     }
   ])) as Record<WindowId, WindowState>;
-}
-
-function fieldNotesStateFromPath(pathname: string) {
-  const match = pathname.match(/^\/field-notes(?:\/([^/]+))?\/?$/);
-  return { open: Boolean(match), slug: match?.[1] ?? null };
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -293,37 +290,6 @@ function IntroWindow({ ready, reducedMotion, onEnter }: { ready: boolean; reduce
   );
 }
 
-function AboutWindow({ onContact }: { onContact: () => void }) {
-  return (
-    <div className="about-layout">
-      <div className="about-copy">
-        <span className="eyebrow">ABOUT ME</span>
-        <h2>Builder. Learner. Problem solver.</h2>
-        <p>
-          My path began in Electrical Engineering, where I learned to see systems as connected parts with real consequences. Curiosity pulled me toward artificial intelligence and a question that still guides me: how can technology make difficult experiences clearer without taking people out of the process?
-        </p>
-        <p>
-          My Christian faith grounds that work in love, service, and human dignity. It is why I build human-centered AI that respects judgment, communicates its limits, and serves rather than replaces. Much of that focus lives in healthcare AI, across patient communication, maternal referral workflows, medical imaging, biosignals, and healthcare data.
-        </p>
-        <p>
-          Outside engineering, I am almost never without my Kindle and my Bible. I really enjoy reading. There is something calming about slowing down, getting lost in a book, and letting a new idea sit with me for a while. I also find rhythm in music, playing piano, long runs, and time with the people I care about.
-        </p>
-        <div className="about-actions">
-          <button className="primary-button compact" type="button" onClick={onContact}>Email me</button>
-          <a className="secondary-button compact" href="https://github.com/iampenuel" target="_blank" rel="noreferrer">GitHub</a>
-          <a className="secondary-button compact" href="https://www.linkedin.com/in/penuel-stanley-zebulon/" target="_blank" rel="noreferrer">LinkedIn</a>
-        </div>
-      </div>
-      <div className="about-gallery" aria-label="Photos of Penuel">
-        <img className="about-main-photo" src="/assets/photos/event-portrait.webp" alt="Penuel standing in a black cap and cardigan" />
-        <div className="photo-strip">
-          <img src="/assets/photos/formal-event.jpg" alt="Penuel wearing formal attire at an evening event" />
-          <img src="/assets/photos/thumbs-up.webp" alt="Penuel giving a thumbs up" />
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function ProjectsWindow({ onOpenProject }: { onOpenProject: (project: Project) => void }) {
   const [selected, setSelected] = useState<string | null>(null);
@@ -414,96 +380,6 @@ function ProjectsWindow({ onOpenProject }: { onOpenProject: (project: Project) =
   );
 }
 
-function ProjectDetailWindow({ project }: { project: Project | null }) {
-  if (!project) return <div className="empty-state">Choose a project folder.</div>;
-  return (
-    <article className="project-detail">
-      <header className="project-hero">
-        <div>
-          <span className="eyebrow">{project.category}</span>
-          <h2>{project.name}</h2>
-          <p className="project-tagline">{project.tagline}</p>
-        </div>
-        {!project.hideHeaderImage && <img src={project.image ?? '/assets/folder.png'} alt={project.imageAlt ?? ''} />}
-      </header>
-      <div className="project-columns">
-        <div className="project-story">
-          <section><h3>Overview</h3><p>{project.overview}</p></section>
-          <section><h3>The problem</h3><p>{project.problem}</p></section>
-          <section><h3>What I built</h3><ul>{project.highlights.map((item) => <li key={item}>{item}</li>)}</ul></section>
-          <section><h3>Safety and scope boundaries</h3><ul>{project.boundaries.map((item) => <li key={item}>{item}</li>)}</ul></section>
-        </div>
-        <aside className="project-facts">
-          <section><h3>Evidence</h3>{project.metrics.map((item) => <div className="metric" key={item}>{item}</div>)}</section>
-          <section><h3>Technologies</h3><div className="tag-cloud">{project.technologies.map((item) => <span key={item}>{item}</span>)}</div></section>
-          <section className="project-links">
-            {project.liveDemoPrimary && project.liveDemo ? (
-              <>
-                <a className="primary-button compact" href={project.liveDemo} target="_blank" rel="noreferrer">{project.liveDemoLabel ?? 'Open live demo'}</a>
-                <a className="secondary-button compact" href={project.repository} target="_blank" rel="noreferrer">View GitHub</a>
-              </>
-            ) : (
-              <>
-                <a className="primary-button compact" href={project.repository} target="_blank" rel="noreferrer">View GitHub</a>
-                {project.liveDemo && <a className="secondary-button compact" href={project.liveDemo} target="_blank" rel="noreferrer">{project.liveDemoLabel ?? 'Open live demo'}</a>}
-              </>
-            )}
-          </section>
-        </aside>
-      </div>
-    </article>
-  );
-}
-
-function ExperienceWindow() {
-  const [tab, setTab] = useState<'Experience' | 'Leadership' | 'Awards' | 'Certifications'>('Experience');
-  return (
-    <div className="experience-shell">
-      <nav className="tab-bar" aria-label="Experience sections">
-        {(['Experience', 'Leadership', 'Awards', 'Certifications'] as const).map((item) => (
-          <button className={tab === item ? 'active' : ''} key={item} onClick={() => setTab(item)}>{item}</button>
-        ))}
-      </nav>
-      <div className="experience-scroll">
-        {tab === 'Experience' && (
-          <div className="timeline">
-            {experience.map((item) => (
-              <article className={`experience-card ${item.emphasis === 'featured' ? 'featured' : ''}`} key={item.id}>
-                {item.logo && <img src={item.logo} alt="" />}
-                <div>
-                  <span className="experience-date">{item.dates}</span>
-                  <h3>{item.role}</h3>
-                  <h4>{item.organization}</h4>
-                  <p>{item.description}</p>
-                  <ul>{item.bullets.map((bullet) => <li key={bullet}>{bullet}</li>)}</ul>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-        {tab === 'Leadership' && leadership.map((item) => (
-          <article className="simple-card leadership-card" key={item.organization}>
-            <img className="section-logo" src={item.logo} alt="InterVarsity logo" />
-            <div><span>{item.dates}</span><h3>{item.role}</h3><h4>{item.organization}</h4><p>{item.description}</p></div>
-          </article>
-        ))}
-        {tab === 'Awards' && awards.map((item) => (
-          <article className="award-card" key={item.title}><div className="award-logo"><img src={item.logo} alt="Penn State logo" /></div><div><span>{item.date} · {item.amount}</span><h3>{item.title}</h3><h4>{item.issuer}</h4><p>{item.description}</p></div></article>
-        ))}
-        {tab === 'Certifications' && (
-          <div className="cert-grid">
-            {certifications.map((item, index) => (
-              <article className={`cert-card ${index === 0 ? 'featured' : ''}`} key={item.title}>
-                <div className="cert-logo"><img src={item.logo} alt={`${item.issuer} logo`} /></div>
-                <div><span>{item.date}</span><h3>{item.title}</h3><h4>{item.issuer}</h4>{item.description && <p>{item.description}</p>}</div>
-              </article>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 function ResumeWindow() {
   return (
@@ -536,13 +412,14 @@ function SocialProfile({ kind }: { kind: 'github' | 'linkedin' }) {
   );
 }
 
-export default function PortfolioDesktop({ initialFieldNotesOpen = false, initialFieldNoteSlug = null }: PortfolioDesktopProps) {
-  const [booting, setBooting] = useState(!initialFieldNotesOpen);
+export default function PortfolioDesktop({ route, onNavigate }: PortfolioDesktopProps) {
+  const fieldNotesOpen = isFieldNotesRoute(route);
+  const [booting, setBooting] = useState(!fieldNotesOpen);
   const [selectedIcon, setSelectedIcon] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [selectedFieldNote, setSelectedFieldNote] = useState<string | null>(initialFieldNoteSlug);
+  const [selectedFieldNote, setSelectedFieldNote] = useState<string | null>(route.fieldNoteSlug);
   const [zCounter, setZCounter] = useState(20);
-  const [windows, setWindows] = useState<Record<WindowId, WindowState>>(() => createWindowState(initialFieldNotesOpen));
+  const [windows, setWindows] = useState<Record<WindowId, WindowState>>(() => createWindowState(fieldNotesOpen));
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [windowMenuOpen, setWindowMenuOpen] = useState(false);
   const [scriptureAttributionOpen, setScriptureAttributionOpen] = useState(false);
@@ -563,22 +440,16 @@ export default function PortfolioDesktop({ initialFieldNotesOpen = false, initia
   }, [reducedMotion]);
 
   useEffect(() => {
-    const syncFieldNotesRoute = () => {
-      const route = fieldNotesStateFromPath(window.location.pathname);
-      setSelectedFieldNote(route.slug);
-      setWindows((current) => ({
-        ...current,
-        'field-notes': {
-          ...current['field-notes'],
-          open: route.open,
-          minimized: false
-        }
-      }));
-    };
-
-    window.addEventListener('popstate', syncFieldNotesRoute);
-    return () => window.removeEventListener('popstate', syncFieldNotesRoute);
-  }, []);
+    setSelectedFieldNote(fieldNotesOpen ? route.fieldNoteSlug : null);
+    setWindows((current) => ({
+      ...current,
+      'field-notes': {
+        ...current['field-notes'],
+        open: fieldNotesOpen,
+        minimized: false
+      }
+    }));
+  }, [fieldNotesOpen, route.fieldNoteSlug]);
 
   useEffect(() => {
     const dialog = scriptureAttributionDialogRef.current;
@@ -610,9 +481,9 @@ export default function PortfolioDesktop({ initialFieldNotesOpen = false, initia
     setSelectedIcon(id);
     setContextMenu(null);
     setWindowMenuOpen(false);
-    if (id === 'field-notes' && !fieldNotesStateFromPath(window.location.pathname).open) {
+    if (id === 'field-notes' && !fieldNotesOpen) {
       setSelectedFieldNote(null);
-      window.history.pushState({ fieldNotes: 'index' }, '', '/field-notes');
+      onNavigate(fieldNotePath());
     }
   };
 
@@ -628,9 +499,9 @@ export default function PortfolioDesktop({ initialFieldNotesOpen = false, initia
 
   const closeWindow = (id: WindowId) => {
     updateWindow(id, { open: false, minimized: false });
-    if (id === 'field-notes' && fieldNotesStateFromPath(window.location.pathname).open) {
+    if (id === 'field-notes' && fieldNotesOpen) {
       setSelectedFieldNote(null);
-      window.history.pushState({ fieldNotes: 'closed' }, '', '/');
+      onNavigate('/');
     }
   };
   const closeContactWindow = () => {
@@ -646,20 +517,17 @@ export default function PortfolioDesktop({ initialFieldNotesOpen = false, initia
     setSelectedFieldNote(null);
     setContextMenu(null);
     setWindows(createWindowState(false));
-    if (fieldNotesStateFromPath(window.location.pathname).open) {
-      window.history.pushState({ fieldNotes: 'closed' }, '', '/');
-    }
+    if (fieldNotesOpen) onNavigate('/');
   };
 
   const selectFieldNote = (slug: string) => {
     setSelectedFieldNote(slug);
-    const path = `/field-notes/${slug}`;
-    if (window.location.pathname !== path) window.history.pushState({ fieldNotes: slug }, '', path);
+    onNavigate(fieldNotePath(slug));
   };
 
   const showFieldNotesIndex = () => {
     setSelectedFieldNote(null);
-    if (window.location.pathname !== '/field-notes') window.history.pushState({ fieldNotes: 'index' }, '', '/field-notes');
+    onNavigate(fieldNotePath());
   };
 
   const handleContextMenu = (event: React.MouseEvent) => {

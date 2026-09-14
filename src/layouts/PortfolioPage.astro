@@ -1,6 +1,9 @@
 ---
-import PortfolioDesktop from '../components/PortfolioDesktop';
+import AdaptivePortfolio from '../components/adaptive/AdaptivePortfolio';
 import '../styles/global.css';
+import '../styles/adaptive-shell.css';
+import '../styles/mobile-shell.css';
+import '../styles/mobile-content.css';
 
 type Props = {
   initialFieldNotesOpen?: boolean;
@@ -8,6 +11,7 @@ type Props = {
 };
 
 const { initialFieldNotesOpen = false, initialFieldNoteSlug = null } = Astro.props;
+const allowHostedShellOverride = import.meta.env.VERCEL_ENV === 'preview';
 ---
 
 <!doctype html>
@@ -16,6 +20,21 @@ const { initialFieldNotesOpen = false, initialFieldNoteSlug = null } = Astro.pro
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#050505" />
+    <script is:inline define:vars={{ allowHostedShellOverride }}>
+      (() => {
+        const isLocalPreview = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        if (!isLocalPreview && !allowHostedShellOverride) return;
+
+        const shell = new URLSearchParams(location.search).get('shell');
+        if (!['mobile', 'tablet', 'desktop'].includes(shell)) return;
+
+        document.documentElement.dataset.portfolioShellOverride = shell;
+        const robots = document.createElement('meta');
+        robots.name = 'robots';
+        robots.content = 'noindex, nofollow';
+        document.head.appendChild(robots);
+      })();
+    </script>
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
@@ -27,6 +46,6 @@ const { initialFieldNotesOpen = false, initialFieldNoteSlug = null } = Astro.pro
     <title>Penuel's Desktop</title>
   </head>
   <body>
-    <PortfolioDesktop client:load initialFieldNotesOpen={initialFieldNotesOpen} initialFieldNoteSlug={initialFieldNoteSlug} />
+    <AdaptivePortfolio client:load initialFieldNotesOpen={initialFieldNotesOpen} initialFieldNoteSlug={initialFieldNoteSlug} />
   </body>
 </html>

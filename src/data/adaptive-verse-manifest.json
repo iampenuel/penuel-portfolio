@@ -1,0 +1,37 @@
+{
+  "translation": "ESV",
+  "use_policy": "Use these five provided raster artworks exactly as supplied; do not regenerate or restyle them.",
+  "rotation_policy": "Use a deterministic client-safe rotation keyed to local date so the same day always yields the same verse on mobile/tablet.",
+  "verses": [
+    {
+      "id": "john-3-16",
+      "reference": "John 3:16",
+      "text": "For God so loved the world, that he gave his only Son, that whoever believes in him should not perish but have eternal life.",
+      "asset": "production-assets/verse-art/04_john_3_16_artwork_REFERENCE.png"
+    },
+    {
+      "id": "romans-8-28",
+      "reference": "Romans 8:28",
+      "text": "And we know that for those who love God all things work together for good, for those who are called according to his purpose.",
+      "asset": "production-assets/verse-art/02_romans-8-28.png"
+    },
+    {
+      "id": "romans-5-8",
+      "reference": "Romans 5:8",
+      "text": "but God shows his love for us in that while we were still sinners, Christ died for us.",
+      "asset": "production-assets/verse-art/03_romans-5-8.png"
+    },
+    {
+      "id": "1-john-4-19",
+      "reference": "1 John 4:19",
+      "text": "We love because he first loved us.",
+      "asset": "production-assets/verse-art/04_1-john-4-19.png"
+    },
+    {
+      "id": "1-john-4-16",
+      "reference": "1 John 4:16",
+      "text": "So we have come to know and to believe the love that God has for us. God is love, and whoever abides in love abides in God, and God abides in him.",
+      "asset": "production-assets/verse-art/05_1-john-4-16.png"
+    }
+  ]
+}
