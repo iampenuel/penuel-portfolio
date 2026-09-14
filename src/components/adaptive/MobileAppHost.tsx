@@ -2,6 +2,7 @@ import { portfolioAppById, type PortfolioAppId } from '../../data/portfolioApps'
 import { publishedFieldNotes } from '../../data/fieldNotes';
 import type { PortfolioRoute } from '../../lib/portfolioRoutes';
 import { MobileAppArtwork } from './MobileIcon';
+import { MobileResumeApp } from './MobileResumeApp';
 
 export function MobileAppHost({
   appId,
@@ -12,6 +13,8 @@ export function MobileAppHost({
   route: PortfolioRoute;
   onHome: () => void;
 }) {
+  if (appId === 'resume') return <MobileResumeApp onHome={onHome} />;
+
   const app = portfolioAppById[appId];
   const selectedNote = appId === 'field-notes'
     ? publishedFieldNotes.find((note) => note.slug === route.fieldNoteSlug) ?? null

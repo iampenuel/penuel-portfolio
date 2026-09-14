@@ -2,7 +2,14 @@ import { useEffect, useRef } from 'react';
 import { portfolioAppById, type PortfolioAppDefinition } from '../../data/portfolioApps';
 import type { FieldNote } from '../../data/fieldNotes';
 import type { Verse } from '../../data/verses';
+import type { NowPlayingSnapshot } from '../../lib/nowPlaying';
 import { MobileIcon } from './MobileIcon';
+import { NowPlayingWidget } from './NowPlayingWidget';
+import { ResumePreviewWidget } from './ResumePreviewWidget';
+
+const HOME_PAGES = [0, 1, 2] as const;
+export type MobileHomePage = (typeof HOME_PAGES)[number];
+const clampPage = (page: number) => Math.min(HOME_PAGES.length - 1, Math.max(0, page)) as MobileHomePage;
 
 const PRIMARY_APP_IDS = [
   'projects',
@@ -23,15 +30,19 @@ export function MobileHomeScreen({
   activePage,
   verse,
   latestNote,
+  nowPlaying,
+  now,
   onPageChange,
   onOpenApp,
   onOpenLatestNote,
   onOpenLibrary
 }: {
-  activePage: 0 | 1;
+  activePage: MobileHomePage;
   verse: Verse | null;
   latestNote: FieldNote | null;
-  onPageChange: (page: 0 | 1) => void;
+  nowPlaying: NowPlayingSnapshot;
+  now: Date | null;
+  onPageChange: (page: MobileHomePage) => void;
   onOpenApp: (app: PortfolioAppDefinition) => void;
   onOpenLatestNote: () => void;
   onOpenLibrary: () => void;
@@ -43,7 +54,7 @@ export function MobileHomeScreen({
   const dockApps = DOCK_APP_IDS.map((id) => portfolioAppById[id]);
   const personalApp = portfolioAppById['definitely-important'];
 
-  const moveToPage = (page: 0 | 1) => {
+  const moveToPage = (page: MobileHomePage) => {
     const scroller = scrollerRef.current;
     if (scroller) scroller.scrollTo({ left: scroller.clientWidth * page, behavior: 'auto' });
     onPageChange(page);
@@ -71,22 +82,22 @@ export function MobileHomeScreen({
         onKeyDown={(event) => {
           if (event.key === 'ArrowRight') {
             event.preventDefault();
-            moveToPage(1);
+            moveToPage(clampPage(activePage + 1));
           }
           if (event.key === 'ArrowLeft') {
             event.preventDefault();
-            moveToPage(0);
+            moveToPage(clampPage(activePage - 1));
           }
         }}
         onScroll={(event) => {
           const scroller = event.currentTarget;
-          const page = Math.min(1, Math.max(0, Math.round(
+          const page = clampPage(Math.round(
             scroller.scrollLeft / Math.max(scroller.clientWidth, 1)
-          ))) as 0 | 1;
+          ));
           if (page !== activePage) onPageChange(page);
         }}
       >
-        <section className="mobile-home-page mobile-home-page--portfolio" aria-label="Home Screen page 1 of 2">
+        <section className="mobile-home-page mobile-home-page--portfolio" aria-label="Home Screen page 1 of 3">
           <nav className="mobile-primary-grid" aria-label="Portfolio apps">
             {primaryApps.map((app) => (
               <MobileIcon key={app.id} app={app} onOpen={() => onOpenApp(app)} />
@@ -94,7 +105,21 @@ export function MobileHomeScreen({
           </nav>
         </section>
 
-        <section className="mobile-home-page mobile-home-page--personal" aria-label="Home Screen page 2 of 2">
+        <section className="mobile-home-page mobile-home-page--personal" aria-label="Home Screen page 2 of 3">
+          <NowPlayingWidget snapshot={nowPlaying} now={now} />
+          <div className="mobile-personal-row">
+            {latestNote && (
+              <button className="mobile-latest-note" type="button" onClick={onOpenLatestNote}>
+                <span>Latest Field Note</span>
+                <strong>{latestNote.week}</strong>
+                <b>{latestNote.title}</b>
+              </button>
+            )}
+            <MobileIcon app={personalApp} onOpen={() => onOpenApp(personalApp)} />
+          </div>
+        </section>
+
+        <section className="mobile-home-page mobile-home-page--reflection" aria-label="Home Screen page 3 of 3">
           <article className="mobile-verse-widget" aria-labelledby="mobile-verse-title">
             <p>Verse of the Day</p>
             <h2 id="mobile-verse-title">{verse?.reference ?? '—'} <span>· ESV</span></h2>
@@ -104,28 +129,19 @@ export function MobileHomeScreen({
               <p>{ESV_COPYRIGHT_NOTICE}</p>
             </details>
           </article>
-          <div className="mobile-personal-row">
-            <MobileIcon app={personalApp} onOpen={() => onOpenApp(personalApp)} />
-            {latestNote && (
-              <button className="mobile-latest-note" type="button" onClick={onOpenLatestNote}>
-                <span>Latest Field Note</span>
-                <strong>{latestNote.week}</strong>
-                <b>{latestNote.title}</b>
-              </button>
-            )}
-          </div>
+          <ResumePreviewWidget onOpen={() => onOpenApp(portfolioAppById.resume)} />
         </section>
       </div>
 
       <div className="mobile-page-controls">
         <div className="mobile-page-dots" aria-label="Home Screen page selection">
-          {[0, 1].map((page) => (
+          {HOME_PAGES.map((page) => (
             <button
               key={page}
               type="button"
-              aria-label={`Page ${page + 1} of 2`}
+              aria-label={`Page ${page + 1} of ${HOME_PAGES.length}`}
               aria-current={activePage === page ? 'page' : undefined}
-              onClick={() => moveToPage(page as 0 | 1)}
+              onClick={() => moveToPage(page)}
             ><span aria-hidden="true" /></button>
           ))}
         </div>

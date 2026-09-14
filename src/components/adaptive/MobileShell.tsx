@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { portfolioApps, type PortfolioAppId } from '../../data/portfolioApps';
 import { publishedFieldNotes } from '../../data/fieldNotes';
+import { nowPlayingSnapshot } from '../../data/nowPlaying';
 import { verseForDate } from '../../data/verses';
 import { fieldNotePath } from '../../lib/portfolioRoutes';
 import type { PortfolioRoute } from '../../lib/portfolioRoutes';
 import { MobileAppHost } from './MobileAppHost';
 import { MobileAppLibrary } from './MobileAppLibrary';
-import { MobileHomeScreen } from './MobileHomeScreen';
+import { MobileHomeScreen, type MobileHomePage } from './MobileHomeScreen';
 import { MobileStatusBar } from './MobileStatusBar';
 
 function isSameLocalMinute(first: Date, second: Date) {
@@ -19,7 +20,7 @@ function isSameLocalMinute(first: Date, second: Date) {
 
 export function MobileShell({ route, onNavigate }: { route: PortfolioRoute; onNavigate: (pathname: string) => void }) {
   const [previewAppId, setPreviewAppId] = useState<PortfolioAppId | null>(route.appId);
-  const [homePage, setHomePage] = useState<0 | 1>(0);
+  const [homePage, setHomePage] = useState<MobileHomePage>(0);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [now, setNow] = useState<Date | null>(null);
   const latestNote = publishedFieldNotes[0] ?? null;
@@ -68,6 +69,8 @@ export function MobileShell({ route, onNavigate }: { route: PortfolioRoute; onNa
           activePage={homePage}
           verse={verse}
           latestNote={latestNote}
+          nowPlaying={nowPlayingSnapshot}
+          now={now}
           onPageChange={setHomePage}
           onOpenApp={openApp}
           onOpenLatestNote={() => onNavigate(fieldNotePath(latestNote?.slug))}
