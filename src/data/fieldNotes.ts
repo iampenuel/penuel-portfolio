@@ -13,6 +13,23 @@ export type FieldNote = {
 
 export const fieldNotes: FieldNote[] = [
   {
+    slug: 'week-03',
+    week: 'Week 03',
+    title: 'More Than the Interface',
+    date: 'September 8–13, 2026',
+    pinnedThought: 'The experience has to make sense for the person inside it.',
+    paragraphs: [
+      'Week 3 gave me a different way to think about human-centered design. One of the things we spent time on was virtual reality and how those experiences are tested. Even though VR is not the area I usually think about first when I think about AI, I could still see the same human-centered ideas showing up. A virtual environment only works if the person inside it can move, react, and understand what is happening without constantly fighting the experience. That made me think about design as something that has to respond to how people actually behave, not just how a system is supposed to work on paper.',
+      'What stood out to me was how physical the interaction can be. In a normal app, I might think about buttons, navigation, or whether something is easy to understand. In VR, the person’s movement and sense of presence become part of the interface too. It reminded me that human-centered design is bigger than making something look clean. The experience has to make sense for the person using it.',
+      'We also spent time with our project groups on Thursday, talking through our plans and problem statement. I enjoyed that part of the week. I like my group, and I am glad I get to work with them this semester. Talking through the project together also reminded me that a good problem statement should not just sound interesting—it should give everyone on the team a clear idea of what we are actually trying to solve.',
+      'My biggest takeaway this week is probably that good technology and good teamwork both require paying attention to people. Whether I am thinking about how someone moves through a virtual environment or how a group agrees on a problem worth solving, the human side cannot be treated as an afterthought. That is something I want to keep carrying into the way I build AI systems.'
+    ],
+    aiTool: 'ChatGPT',
+    aiUseNote: 'I used ChatGPT to help organize my own notes from the week into a concise reflection and polish the final wording. The learning moments, opinions, and experiences are my own; AI helped with structure and clarity.',
+    aiPrompt: 'Using only the ideas and experiences I provide, help me organize my Week 3 reflection into a concise 300–500 word post. Focus on what I learned from virtual reality and human-centered design, how VR made me think beyond normal screen-based interfaces, and my experience working with my project group on our problem statement. Keep my voice natural, do not invent class details or experiences, and make sure the reflection addresses key learning moments, personal connections, challenges/growth, and AI use. Polish the writing without making it generic or overly formal.',
+    published: true
+  },
+  {
     slug: 'week-02',
     week: 'Week 02',
     title: 'Built Around People',
