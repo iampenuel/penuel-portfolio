@@ -15,7 +15,7 @@ const PRIMARY_APP_IDS = [
   'linkedin'
 ] as const;
 
-const DOCK_APP_IDS = ['projects', 'field-notes', 'contact', 'resume'] as const;
+const DOCK_APP_IDS = ['projects', 'contact', 'field-notes'] as const;
 
 const ESV_COPYRIGHT_NOTICE = 'Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. ESV Text Edition: 2025. The ESV text may not be quoted in any publication made available to the public by a Creative Commons license. The ESV may not be translated in whole or in part into any other language. Used by permission. All rights reserved.';
 
@@ -37,6 +37,8 @@ export function MobileHomeScreen({
   onOpenLibrary: () => void;
 }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const activePageRef = useRef(activePage);
+  activePageRef.current = activePage;
   const primaryApps = PRIMARY_APP_IDS.map((id) => portfolioAppById[id]);
   const dockApps = DOCK_APP_IDS.map((id) => portfolioAppById[id]);
   const personalApp = portfolioAppById['definitely-important'];
@@ -48,14 +50,15 @@ export function MobileHomeScreen({
   };
 
   useEffect(() => {
+    // Realign only on entry/resize; page-dot updates must not interrupt a native swipe.
     const keepPageAligned = () => {
       const scroller = scrollerRef.current;
-      if (scroller) scroller.scrollLeft = scroller.clientWidth * activePage;
+      if (scroller) scroller.scrollLeft = scroller.clientWidth * activePageRef.current;
     };
     keepPageAligned();
     window.addEventListener('resize', keepPageAligned);
     return () => window.removeEventListener('resize', keepPageAligned);
-  }, [activePage]);
+  }, []);
 
   return (
     <div className="mobile-home-screen">
@@ -84,12 +87,6 @@ export function MobileHomeScreen({
         }}
       >
         <section className="mobile-home-page mobile-home-page--portfolio" aria-label="Home Screen page 1 of 2">
-          <article className="mobile-welcome-widget" aria-labelledby="mobile-welcome-title">
-            <p>Welcome</p>
-            <h1 id="mobile-welcome-title">Penuel Stanley-Zebulon</h1>
-            <strong>Builder. Learner. Problem solver.</strong>
-            <span>Human-centered AI · Healthcare AI · Product Engineering</span>
-          </article>
           <nav className="mobile-primary-grid" aria-label="Portfolio apps">
             {primaryApps.map((app) => (
               <MobileIcon key={app.id} app={app} onOpen={() => onOpenApp(app)} />
@@ -121,7 +118,6 @@ export function MobileHomeScreen({
       </div>
 
       <div className="mobile-page-controls">
-        <span aria-hidden="true" />
         <div className="mobile-page-dots" aria-label="Home Screen page selection">
           {[0, 1].map((page) => (
             <button
@@ -133,7 +129,13 @@ export function MobileHomeScreen({
             ><span aria-hidden="true" /></button>
           ))}
         </div>
-        <button className="mobile-library-trigger" type="button" onClick={onOpenLibrary}>App Library</button>
+        <button className="mobile-library-trigger" type="button" onClick={onOpenLibrary} aria-label="Search apps">
+          <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+            <circle cx="8.5" cy="8.5" r="5.5" />
+            <path d="m12.5 12.5 4 4" />
+          </svg>
+          <span>Search</span>
+        </button>
       </div>
 
       <nav className="mobile-dock" aria-label="Mobile dock">

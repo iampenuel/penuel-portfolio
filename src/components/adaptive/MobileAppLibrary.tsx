@@ -42,6 +42,7 @@ export function MobileAppLibrary({
           value={query}
           onChange={(event) => setQuery(event.currentTarget.value)}
           placeholder="Search Apps"
+          autoFocus
           autoComplete="off"
           spellCheck={false}
         />
