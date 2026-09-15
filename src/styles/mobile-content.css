@@ -6,7 +6,8 @@
   flex: 1;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  padding-bottom: env(safe-area-inset-bottom);
+  /* The phone shell owns the safe inset, including browser-toolbar breathing room. */
+  padding-bottom: 0;
   user-select: text;
 }
 .mobile-content-nav {

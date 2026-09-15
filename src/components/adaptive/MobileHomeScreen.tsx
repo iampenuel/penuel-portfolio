@@ -4,6 +4,7 @@ import type { AdaptiveVerse } from '../../data/adaptiveVerses';
 import { MobileIcon } from './MobileIcon';
 import { MobileVerseWidget } from './MobileVerseWidget';
 import { ResumePreviewWidget } from './ResumePreviewWidget';
+import { homePageOffset, verseArtworkSize } from '../../lib/phoneLayout';
 
 const HOME_PAGES = [0, 1] as const;
 export type MobileHomePage = (typeof HOME_PAGES)[number];
@@ -40,10 +41,13 @@ export function MobileHomeScreen({
   activePageRef.current = activePage;
   const primaryApps = PRIMARY_APP_IDS.map((id) => portfolioAppById[id]);
   const dockApps = DOCK_APP_IDS.map((id) => portfolioAppById[id]);
+  const pageOffset = (scroller: HTMLDivElement, page: number) => homePageOffset(
+    Array.from(scroller.children, (child) => (child as HTMLElement).offsetLeft), page
+  );
 
   const moveToPage = (page: MobileHomePage) => {
     const scroller = scrollerRef.current;
-    if (scroller) scroller.scrollTo({ left: scroller.clientWidth * page, behavior: 'auto' });
+    if (scroller) scroller.scrollTo({ left: pageOffset(scroller, page), behavior: 'auto' });
     onPageChange(page);
   };
 
@@ -52,13 +56,37 @@ export function MobileHomeScreen({
     const keepPageAligned = () => {
       const scroller = scrollerRef.current;
       if (scroller && scroller.clientWidth > 0) {
-        scroller.scrollLeft = scroller.clientWidth * activePageRef.current;
+        scroller.scrollLeft = pageOffset(scroller, activePageRef.current);
       }
     };
     keepPageAligned();
+    const observer = new ResizeObserver(keepPageAligned);
+    if (scrollerRef.current) observer.observe(scrollerRef.current);
     window.addEventListener('resize', keepPageAligned);
-    return () => window.removeEventListener('resize', keepPageAligned);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', keepPageAligned);
+    };
   }, []);
+
+  useEffect(() => {
+    const page = scrollerRef.current?.querySelector<HTMLElement>('.mobile-home-page--reflection');
+    const widget = page?.querySelector<HTMLElement>('.mobile-verse-widget');
+    const copy = page?.querySelector<HTMLElement>('.mobile-verse-copy');
+    if (!page || !widget || !copy) return;
+    const fitArtwork = () => {
+      if (!page.clientWidth || !page.clientHeight) return;
+      const style = getComputedStyle(page);
+      const usableHeight = page.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+      const size = verseArtworkSize(widget.clientWidth, usableHeight, copy.offsetHeight, parseFloat(getComputedStyle(widget).gap));
+      widget.style.setProperty('--mobile-verse-art-size', `${size}px`);
+    };
+    fitArtwork();
+    const observer = new ResizeObserver(fitArtwork);
+    observer.observe(page);
+    observer.observe(copy);
+    return () => observer.disconnect();
+  }, [verse]);
 
   return (
     <div className="mobile-home-screen">
@@ -82,9 +110,8 @@ export function MobileHomeScreen({
           const scroller = event.currentTarget;
           // Hidden mobile shells have zero width during tablet/desktop orientation changes.
           if (scroller.clientWidth === 0) return;
-          const page = clampPage(Math.round(
-            scroller.scrollLeft / Math.max(scroller.clientWidth, 1)
-          ));
+          const page = HOME_PAGES.reduce((closest, candidate) =>
+            Math.abs(scroller.scrollLeft - pageOffset(scroller, candidate)) < Math.abs(scroller.scrollLeft - pageOffset(scroller, closest)) ? candidate : closest, 0);
           if (page !== activePage) onPageChange(page);
         }}
       >

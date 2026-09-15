@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
+import { createPreparedVideo } from '../lib/preparedVideo';
+import { logPhoneMediaTiming } from '../lib/phoneMediaDiagnostics';
 
 const VIDEO_ID = 'dQw4w9WgXcQ';
 const VIDEO_URL = `https://www.youtube.com/watch?v=${VIDEO_ID}`;
@@ -15,6 +17,7 @@ type YouTubePlayer = {
   getIframe: () => HTMLIFrameElement;
   getPlayerState: () => number;
   loadVideoById: (options: { videoId: string; startSeconds: number; endSeconds: number }) => void;
+  cueVideoById: (options: { videoId: string; startSeconds: number; endSeconds: number }) => void;
   pauseVideo: () => void;
   playVideo: () => void;
   setVolume: (volume: number) => void;
@@ -100,9 +103,12 @@ function loadYouTubeApi() {
   return youtubeApiPromise;
 }
 
-export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 'Fine. Click to continue.', idPrefix = '' }: { minimized: boolean; reducedMotion: boolean; onClose: () => void; playLabel?: string; idPrefix?: string }) {
+export type RickrollLaunch = { openFromGesture: () => void };
+
+export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 'Fine. Click to continue.', idPrefix = '', prepareAtIdle = false, launchRef }: { minimized: boolean; reducedMotion: boolean; onClose: () => void; playLabel?: string; idPrefix?: string; prepareAtIdle?: boolean; launchRef?: Ref<RickrollLaunch> }) {
   const descriptionId = `${idPrefix ? `${idPrefix}-` : ''}rickroll-description`;
-  const [phase, setPhase] = useState<PlayerPhase>('loading');
+  const [phase, setPhase] = useState<PlayerPhase>(prepareAtIdle ? 'player' : 'loading');
+  const [prepared] = useState(() => createPreparedVideo({ videoId: VIDEO_ID, startSeconds: START_SECONDS, endSeconds: END_SECONDS }));
   const [playerReady, setPlayerReady] = useState(false);
   const [showPlayFallback, setShowPlayFallback] = useState(false);
   const [showRickroll, setShowRickroll] = useState(false);
@@ -115,6 +121,7 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 
   const minimizedRef = useRef(minimized);
   const playCheckRef = useRef<number | null>(null);
   const progressCheckRef = useRef<number | null>(null);
+  const readyCheckRef = useRef<number | null>(null);
   const completedRef = useRef(false);
 
   const clearChecks = useCallback(() => {
@@ -126,6 +133,9 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 
 
   const destroyPlayer = useCallback(() => {
     clearChecks();
+    if (readyCheckRef.current !== null) window.clearTimeout(readyCheckRef.current);
+    readyCheckRef.current = null;
+    prepared.detach();
     const player = playerRef.current;
     playerRef.current = null;
     if (!player) return;
@@ -135,7 +145,7 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 
     } catch {
       // The iframe may already have been removed after a network or embed failure.
     }
-  }, [clearChecks]);
+  }, [clearChecks, prepared]);
 
   const completeSegment = useCallback(() => {
     if (completedRef.current || !mountedRef.current) return;
@@ -163,7 +173,7 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 
   const schedulePlayFallback = useCallback(() => {
     if (playCheckRef.current !== null) window.clearTimeout(playCheckRef.current);
     playCheckRef.current = window.setTimeout(() => {
-      if (!mountedRef.current || playerRef.current?.getPlayerState() === window.YT?.PlayerState.PLAYING) return;
+      if (!mountedRef.current || minimizedRef.current || playerRef.current?.getPlayerState() === window.YT?.PlayerState.PLAYING) return;
       setShowPlayFallback(true);
       setStatus('Playback needs one more click.');
     }, 1_800);
@@ -196,6 +206,22 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 
     setAttempt((current) => current + 1);
   }, [destroyPlayer]);
 
+  useImperativeHandle(launchRef, () => ({
+    openFromGesture() {
+      // MobileShell reveals this same resident iframe synchronously before this call.
+      minimizedRef.current = false;
+      completedRef.current = false;
+      if (phase === 'error') retry();
+      else setPhase('player');
+      setShowRickroll(false);
+      setShowPlayFallback(false);
+      setNeedsResume(false);
+      setStatus('Opening important file…');
+      prepared.openFromGesture();
+      if (playerReady) schedulePlayFallback();
+    }
+  }), [phase, playerReady, prepared, retry, schedulePlayFallback]);
+
   useEffect(() => {
     mountedRef.current = true;
     return () => {
@@ -207,6 +233,14 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 
   useEffect(() => {
     minimizedRef.current = minimized;
     if (!minimized) return;
+    if (prepareAtIdle) {
+      prepared.close();
+      clearChecks();
+      setShowPlayFallback(false);
+      setNeedsResume(false);
+      if (completedRef.current) setPhase('player');
+      return;
+    }
     const player = playerRef.current;
     if (!player) return;
     const wasPlaying = player.getPlayerState() === window.YT?.PlayerState.PLAYING;
@@ -215,7 +249,20 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 
       setNeedsResume(true);
       setStatus('Playback paused while the window is minimized.');
     }
-  }, [minimized]);
+  }, [minimized, prepareAtIdle, prepared, clearChecks]);
+
+  useEffect(() => {
+    if (!prepareAtIdle) return;
+    const pauseWhenHidden = () => {
+      if (document.visibilityState !== 'hidden') return;
+      const wasRequested = prepared.isRequested();
+      prepared.close();
+      clearChecks();
+      if (wasRequested) setNeedsResume(true);
+    };
+    document.addEventListener('visibilitychange', pauseWhenHidden);
+    return () => document.removeEventListener('visibilitychange', pauseWhenHidden);
+  }, [prepareAtIdle, prepared, clearChecks]);
 
   useEffect(() => {
     if (phase !== 'loading') return;
@@ -229,13 +276,21 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 
 
     loadYouTubeApi().then((api) => {
       if (cancelled || !mountedRef.current || !playerHostRef.current) return;
+      if (prepareAtIdle) readyCheckRef.current = window.setTimeout(() => {
+        destroyPlayer();
+        setPhase('error');
+        setStatus('The YouTube player could not be loaded.');
+        if (import.meta.env.DEV || ['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+          console.warn('YouTube player readiness timed out (API/network failure).');
+        }
+      }, 12_000);
       const player = new api.Player(playerHostRef.current, {
         width: '100%',
         height: '100%',
         videoId: VIDEO_ID,
         host: 'https://www.youtube-nocookie.com',
         playerVars: {
-          autoplay: 1,
+          autoplay: prepareAtIdle ? 0 : 1,
           controls: 1,
           enablejsapi: 1,
           end: END_SECONDS,
@@ -246,11 +301,20 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 
         },
         events: {
           onReady: ({ target }) => {
-            if (!mountedRef.current) return;
+            if (!mountedRef.current || (prepareAtIdle && playerRef.current !== target)) return;
+            if (readyCheckRef.current !== null) window.clearTimeout(readyCheckRef.current);
+            readyCheckRef.current = null;
             playerRef.current = target;
             target.setVolume(40);
             target.getIframe().title = 'Official Rick Astley YouTube video player';
             setPlayerReady(true);
+            if (prepareAtIdle) {
+              logPhoneMediaTiming('ready');
+              prepared.attach(target);
+              if (prepared.isRequested()) schedulePlayFallback();
+              else setStatus('Important file ready.');
+              return;
+            }
             if (minimizedRef.current) {
               target.pauseVideo();
               setNeedsResume(true);
@@ -261,7 +325,12 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 
           },
           onStateChange: ({ data }) => {
             if (!mountedRef.current) return;
+            if (prepareAtIdle && !prepared.isRequested() && data !== api.PlayerState.PLAYING) return;
             if (data === api.PlayerState.PLAYING) {
+              if (prepareAtIdle && (minimizedRef.current || document.hidden || !prepared.isRequested())) {
+                prepared.close();
+                return;
+              }
               if (playCheckRef.current !== null) window.clearTimeout(playCheckRef.current);
               playCheckRef.current = null;
               setShowPlayFallback(false);
@@ -281,9 +350,9 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 
             setStatus('The video could not be loaded.');
           },
           onAutoplayBlocked: () => {
-            if (!mountedRef.current) return;
+            if (!mountedRef.current || minimizedRef.current) return;
             setShowPlayFallback(true);
-            setStatus('Autoplay was blocked. Playback needs one more click.');
+            setStatus(prepareAtIdle ? 'Tap to open file.' : 'Autoplay was blocked. Playback needs one more click.');
           }
         }
       });
@@ -299,7 +368,7 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 
     });
 
     return () => { cancelled = true; };
-  }, [attempt, beginSegment, completeSegment, destroyPlayer, phase, startProgressChecks]);
+  }, [attempt, beginSegment, completeSegment, destroyPlayer, phase, startProgressChecks, prepareAtIdle, prepared, schedulePlayFallback]);
 
   const playFromFallback = () => {
     const player = playerRef.current;
@@ -307,6 +376,11 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 
     setShowPlayFallback(false);
     setNeedsResume(false);
     setStatus('Attempting playback.');
+    if (prepareAtIdle) {
+      prepared.openFromGesture();
+      schedulePlayFallback();
+      return;
+    }
     // Keep these calls synchronous with the visitor's tap for iPhone/Safari.
     player.unMute();
     player.setVolume(40);
@@ -338,7 +412,7 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 
         <div className="quicktime-stage">
           <div className="youtube-player-host" ref={playerHostRef} />
           {!playerReady && <div className="player-connecting"><span className="quicktime-spinner" aria-hidden="true" /><span>Connecting to YouTube…</span></div>}
-          {showRickroll && phase !== 'ended' && <div className="rickroll-toast">Yep, you’ve been rickrolled, LOL.</div>}
+          {showRickroll && !prepareAtIdle && phase !== 'ended' && <div className="rickroll-toast">Yep, you’ve been rickrolled, LOL.</div>}
           {(showPlayFallback || needsResume) && phase !== 'ended' && (
             <button className="player-action-overlay" type="button" onClick={playFromFallback}>
               {needsResume ? 'Resume' : playLabel}
