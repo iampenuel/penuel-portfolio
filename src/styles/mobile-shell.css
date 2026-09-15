@@ -1,17 +1,20 @@
 .mobile-shell {
-  --mobile-edge: clamp(10px, 3.5vw, 18px);
+  --mobile-edge: max(clamp(16px, 5.5vw, 24px), env(safe-area-inset-left), env(safe-area-inset-right));
   --mobile-icon-size: clamp(68px, 21.5vw, 92px);
+  --mobile-bottom-breathing-room: clamp(18px, 2.8dvh, 24px);
+  --mobile-bottom-inset: calc(env(safe-area-inset-bottom) + var(--mobile-bottom-breathing-room));
+  --mobile-control-gap: clamp(12px, 2.1dvh, 18px);
   width: 100%;
   height: 100vh;
   height: 100dvh;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: min(100dvh, var(--mobile-visible-height, 100dvh));
+  min-height: 0;
   display: flex;
   flex-direction: column;
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  padding: 0;
+  padding: env(safe-area-inset-top) 0 var(--mobile-bottom-inset);
   color: #f7f7fa;
   background: #000;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -69,14 +72,18 @@
 .mobile-battery-motif i { width: 76%; height: 100%; display: block; background: currentColor; border-radius: 1px; }
 
 .mobile-home-screen {
+  width: min(100%, 460px);
+  min-width: 0;
+  margin-inline: auto;
   min-height: 0;
   flex: 1;
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto auto;
-  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  grid-template-rows: minmax(0, 1fr);
+  padding-bottom: 0;
 }
 
 .mobile-home-pages {
+  width: 100%;
   min-width: 0;
   min-height: 0;
   display: flex;
@@ -90,9 +97,22 @@
 .mobile-home-pages::-webkit-scrollbar { display: none; }
 .mobile-home-pages:focus-visible { outline: 2px solid #64d2ff; outline-offset: -3px; }
 
+/* Page 1 carries its own controls through the native swipe. Both pages always
+   occupy the full-height pager; settled-page state never changes its geometry. */
+.mobile-home-page-frame {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  flex: 0 0 100%;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
 .mobile-home-page {
   width: 100%;
-  min-width: 100%;
+  min-width: 0;
   min-height: 0;
   flex: 0 0 100%;
   scroll-snap-align: start;
@@ -101,21 +121,22 @@
   overflow-y: auto;
   overscroll-behavior-y: contain;
   padding:
-    clamp(16px, 2.6vh, 24px)
-    max(var(--mobile-edge), env(safe-area-inset-right))
+    clamp(16px, 2.6dvh, 24px)
+    var(--mobile-edge)
     12px
-    max(var(--mobile-edge), env(safe-area-inset-left));
+    var(--mobile-edge);
   scrollbar-width: none;
 }
 .mobile-home-page::-webkit-scrollbar { display: none; }
 .mobile-home-page--portfolio {
+  scroll-snap-align: none;
   display: flex;
   flex-direction: column;
   gap: clamp(8px, 2vh, 20px);
 }
 .mobile-home-page--portfolio .mobile-primary-grid { flex-shrink: 0; }
 .mobile-home-page--portfolio .mobile-resume-widget {
-  width: calc(100vw - 2 * clamp(16px, 5.5vw, 24px));
+  width: 100%;
   max-width: 100%;
   min-height: 0;
   flex: 0 1 auto;
@@ -176,23 +197,31 @@
 }
 
 .mobile-home-page--reflection {
-  --mobile-widget-gap: clamp(18px, 2.7vh, 24px);
-  display: flex;
-  flex-direction: column;
-  gap: var(--mobile-widget-gap);
-  padding-left: max(clamp(16px, 5.5vw, 24px), env(safe-area-inset-left));
-  padding-right: max(clamp(16px, 5.5vw, 24px), env(safe-area-inset-right));
+  --mobile-widget-gap: clamp(12px, 1.6dvh, 14px);
+  /* A definite scrollport ends above the measured controls, including during chrome resize.
+     Normal block flow keeps trailing padding in the scroll range (no flex overflow tail). */
+  display: block;
+  height: min(100%, var(--phone-page-content-height, 100%));
+  max-height: 100%;
+  padding-top: clamp(12px, 1.5dvh, 16px);
   padding-bottom: 20px;
+  scroll-padding-bottom: 20px;
 }
-.mobile-home-page--reflection > * { flex-shrink: 0; }
 
 .mobile-verse-widget {
+  width: min(100%, var(--mobile-verse-rail-width, 100%));
+  margin-inline: auto;
   display: flex;
   flex-direction: column;
   gap: var(--mobile-widget-gap);
 }
-.mobile-verse-artwork {
+.mobile-verse-artwork,
+.mobile-verse-copy {
+  /* One shared rail: any fit adjustment applies equally to artwork and copy. */
   width: 100%;
+  min-width: 0;
+}
+.mobile-verse-artwork {
   aspect-ratio: 1;
   overflow: hidden;
   border-radius: 26px;
@@ -236,6 +265,18 @@
 }
 .mobile-verse-copy details p { margin: 4px 0 14px; }
 
+@media (min-height: 760px) {
+  /* Distribute the height savings across Page 2, preserving type and touch targets. */
+  .mobile-home-page--reflection {
+    --mobile-widget-gap: 8px;
+    --mobile-verse-rail-clearance: 8px;
+    padding-top: 8px;
+  }
+  .mobile-verse-copy { padding-top: 12px; padding-bottom: 8px; }
+  .mobile-verse-copy h2 { margin-top: 4px; }
+  .mobile-verse-copy blockquote { margin-top: 8px; margin-bottom: 4px; }
+}
+
 .mobile-resume-widget {
   width: 100%;
   display: flex;
@@ -278,7 +319,7 @@
   min-height: 0;
   flex: 1;
   overflow: auto;
-  padding: 6px max(var(--mobile-edge), env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(var(--mobile-edge), env(safe-area-inset-left));
+  padding: 6px var(--mobile-edge) 18px;
 }
 .mobile-resume-app h1 { margin: 0; text-align: center; font-size: 17px; font-weight: 650; }
 .mobile-resume-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0; }
@@ -292,7 +333,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0 var(--mobile-edge) 16px;
+  gap: 4px;
+  padding: 0 var(--mobile-edge) var(--mobile-control-gap);
 }
 .mobile-page-dots { display: flex; align-items: center; justify-content: center; }
 .mobile-page-dots button {
@@ -344,7 +386,7 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: center;
-  margin: 0 max(12px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left));
+  margin: 0 max(12px, env(safe-area-inset-right), env(safe-area-inset-left));
   padding: 12px clamp(18px, 7vw, 32px);
   background: rgba(29,30,33,.5);
   border: 1px solid rgba(255,255,255,.16);
@@ -371,7 +413,7 @@
   flex: 1;
   overflow-x: hidden;
   overflow-y: auto;
-  padding: 6px var(--mobile-edge) max(18px, env(safe-area-inset-bottom));
+  padding: 6px var(--mobile-edge) 18px;
   scrollbar-width: none;
 }
 .mobile-app-library::-webkit-scrollbar,
@@ -433,7 +475,8 @@
   border: 0;
   outline: 0;
   font: inherit;
-  font-size: 15px;
+  /* Prevent iOS focus zoom from leaving the entire Home Screen enlarged/panned. */
+  font-size: 16px;
 }
 .mobile-library-search input::placeholder { color: rgba(255,255,255,.48); }
 .mobile-library-groups { display: grid; gap: 13px; }
@@ -497,10 +540,12 @@
   outline-offset: 2px;
 }
 
-@media (max-width: 340px) {
-  .mobile-status-bar {
-    padding-right: max(20px, env(safe-area-inset-right));
-    padding-left: max(20px, env(safe-area-inset-left));
+@media (max-width: 767px) {
+  /* Phone content owns its scrolling; the document must not become a second rail. */
+  html:not([data-portfolio-shell-override="desktop"]):not([data-portfolio-shell-override="tablet"]),
+  html:not([data-portfolio-shell-override="desktop"]):not([data-portfolio-shell-override="tablet"]) body {
+    overflow: hidden;
+    overscroll-behavior-x: none;
   }
 }
 
@@ -511,7 +556,6 @@
 @media (max-height: 650px) {
   .mobile-home-page { padding-top: 10px; }
   .mobile-primary-grid { row-gap: 12px; }
-  .mobile-page-controls { padding-bottom: 8px; }
   .mobile-dock { padding-top: 8px; padding-bottom: 8px; }
   .mobile-home-page--portfolio { gap: 8px; }
   .mobile-home-page--portfolio .mobile-resume-widget { padding: 6px 12px; gap: 4px; }

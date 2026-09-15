@@ -30,12 +30,13 @@ export function MobileAppHost({ appId, route, onHome, onNavigate, onOpenApp, isA
   if (appId === 'resume') return <MobileResumeApp onHome={onHome} />;
   const app = portfolioAppById[appId];
   const pane = ['contact', 'experience', 'field-notes', 'definitely-important'].includes(appId);
+  const titleId = `mobile-${appId}-content-title`;
 
   return (
-    <section className="mobile-content-app" aria-labelledby="mobile-content-title">
+    <section className="mobile-content-app" aria-labelledby={titleId}>
       <nav className="mobile-content-nav" aria-label={`${app.label} navigation`}>
         <button type="button" onClick={() => appId === 'contact' ? setContactCloseRequest((count) => count + 1) : onHome()}>‹ Home</button>
-        <h1 id="mobile-content-title" ref={titleRef} tabIndex={-1}>{app.label}</h1>
+        <h1 id={titleId} ref={titleRef} tabIndex={-1}>{app.label}</h1>
         {selectedProject && <button type="button" onClick={() => setSelectedProject(null)}>‹ Projects</button>}
       </nav>
       <div ref={contentRef} className={`mobile-content-body${pane ? ' mobile-content-body--pane' : ''}`}>
@@ -53,7 +54,7 @@ export function MobileAppHost({ appId, route, onHome, onNavigate, onOpenApp, isA
         {appId === 'experience' && <ExperienceWindow />}
         {appId === 'field-notes' && <FieldNotesWindow idPrefix="mobile" selectedSlug={route.fieldNoteSlug} onSelectNote={(slug) => onNavigate(fieldNotePath(slug))} onBackToIndex={() => onNavigate(fieldNotePath())} />}
         {appId === 'contact' && <ContactWindow idPrefix="mobile" closeRequest={contactCloseRequest} minimized={!isActive} onClose={onHome} />}
-        {appId === 'definitely-important' && <RickrollPlayer idPrefix="mobile" minimized={!isActive} reducedMotion={reducedMotion} onClose={onHome} playLabel="Tap to open file" />}
+        {appId === 'definitely-important' && isActive && <RickrollPlayer idPrefix="mobile" mobile minimized={!isActive} reducedMotion={reducedMotion} onClose={onHome} playLabel="Tap to open file" />}
       </div>
     </section>
   );

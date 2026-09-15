@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createVideoLifetime } from '../lib/videoLifetime';
+import { logMediaDiagnostic } from '../lib/phoneMediaDiagnostics';
 
 const VIDEO_ID = 'dQw4w9WgXcQ';
 const VIDEO_URL = `https://www.youtube.com/watch?v=${VIDEO_ID}`;
@@ -51,32 +53,38 @@ declare global {
 let youtubeApiPromise: Promise<YouTubeNamespace> | null = null;
 
 function loadYouTubeApi() {
-  if (window.YT?.Player) return Promise.resolve(window.YT);
+  if (window.YT?.Player) {
+    logMediaDiagnostic('api', 'api-cached');
+    return Promise.resolve(window.YT);
+  }
   if (youtubeApiPromise) return youtubeApiPromise;
 
+  logMediaDiagnostic('api', 'api-load-start');
   youtubeApiPromise = new Promise<YouTubeNamespace>((resolve, reject) => {
     let settled = false;
     const finish = (api: YouTubeNamespace) => {
       if (settled) return;
       settled = true;
       window.clearTimeout(timeout);
+      logMediaDiagnostic('api', 'api-loaded');
       resolve(api);
     };
-    const fail = () => {
+    const fail = (reason: 'network-error' | 'api-timeout' | 'missing-api') => {
       if (settled) return;
       settled = true;
       window.clearTimeout(timeout);
       const failedScript = document.getElementById(PLAYER_SCRIPT_ID);
       failedScript?.setAttribute('data-load-failed', 'true');
+      logMediaDiagnostic('api', reason);
       reject(new Error('The YouTube IFrame API did not load.'));
     };
-    const timeout = window.setTimeout(fail, 12_000);
+    const timeout = window.setTimeout(() => fail('api-timeout'), 12_000);
     const previousReadyHandler = window.onYouTubeIframeAPIReady;
 
     window.onYouTubeIframeAPIReady = () => {
       previousReadyHandler?.();
       if (window.YT?.Player) finish(window.YT);
-      else fail();
+      else fail('missing-api');
     };
 
     let script = document.getElementById(PLAYER_SCRIPT_ID) as HTMLScriptElement | null;
@@ -91,7 +99,7 @@ function loadYouTubeApi() {
       script.async = true;
       document.head.appendChild(script);
     }
-    script.addEventListener('error', fail, { once: true });
+    script.addEventListener('error', () => fail('network-error'), { once: true });
   }).catch((error) => {
     youtubeApiPromise = null;
     throw error;
@@ -100,10 +108,12 @@ function loadYouTubeApi() {
   return youtubeApiPromise;
 }
 
-export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 'Fine. Click to continue.', idPrefix = '' }: { minimized: boolean; reducedMotion: boolean; onClose: () => void; playLabel?: string; idPrefix?: string }) {
+export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 'Fine. Click to continue.', idPrefix = '', mobile = false }: { minimized: boolean; reducedMotion: boolean; onClose: () => void; playLabel?: string; idPrefix?: string; mobile?: boolean }) {
   const descriptionId = `${idPrefix ? `${idPrefix}-` : ''}rickroll-description`;
+  const scope = mobile ? 'mobile' : 'desktop';
   const [phase, setPhase] = useState<PlayerPhase>('loading');
   const [playerReady, setPlayerReady] = useState(false);
+  const [slowConnection, setSlowConnection] = useState(false);
   const [showPlayFallback, setShowPlayFallback] = useState(false);
   const [showRickroll, setShowRickroll] = useState(false);
   const [needsResume, setNeedsResume] = useState(false);
@@ -111,10 +121,12 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 
   const [status, setStatus] = useState('Opening important file…');
   const playerHostRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YouTubePlayer | null>(null);
+  const lifetimeRef = useRef<ReturnType<typeof createVideoLifetime<YouTubePlayer>> | null>(null);
   const mountedRef = useRef(true);
   const minimizedRef = useRef(minimized);
   const playCheckRef = useRef<number | null>(null);
   const progressCheckRef = useRef<number | null>(null);
+  const readyCheckRef = useRef<number | null>(null);
   const completedRef = useRef(false);
 
   const clearChecks = useCallback(() => {
@@ -126,16 +138,15 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 
 
   const destroyPlayer = useCallback(() => {
     clearChecks();
-    const player = playerRef.current;
+    if (readyCheckRef.current !== null) window.clearTimeout(readyCheckRef.current);
+    readyCheckRef.current = null;
+    const lifetime = lifetimeRef.current;
+    lifetimeRef.current = null;
     playerRef.current = null;
-    if (!player) return;
-    try {
-      player.stopVideo();
-      player.destroy();
-    } catch {
-      // The iframe may already have been removed after a network or embed failure.
-    }
-  }, [clearChecks]);
+    if (!lifetime) return;
+    lifetime.dispose();
+    logMediaDiagnostic(scope, 'player-destroyed-detached');
+  }, [clearChecks, scope]);
 
   const completeSegment = useCallback(() => {
     if (completedRef.current || !mountedRef.current) return;
@@ -163,14 +174,14 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 
   const schedulePlayFallback = useCallback(() => {
     if (playCheckRef.current !== null) window.clearTimeout(playCheckRef.current);
     playCheckRef.current = window.setTimeout(() => {
-      if (!mountedRef.current || playerRef.current?.getPlayerState() === window.YT?.PlayerState.PLAYING) return;
+      if (!mountedRef.current || minimizedRef.current || playerRef.current?.getPlayerState() === window.YT?.PlayerState.PLAYING) return;
       setShowPlayFallback(true);
       setStatus('Playback needs one more click.');
     }, 1_800);
   }, []);
 
   const beginSegment = useCallback(() => {
-    const player = playerRef.current;
+    const player = lifetimeRef.current?.readyPlayer();
     if (!player) return;
     completedRef.current = false;
     setPhase('player');
@@ -180,42 +191,65 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 
     setStatus('Attempting playback.');
     player.setVolume(40);
     player.loadVideoById({ videoId: VIDEO_ID, startSeconds: START_SECONDS, endSeconds: END_SECONDS });
+    logMediaDiagnostic(scope, 'playVideo', { reason: 'ready-or-replay' });
     player.playVideo();
     schedulePlayFallback();
-  }, [schedulePlayFallback]);
+  }, [schedulePlayFallback, scope]);
 
   const retry = useCallback(() => {
+    logMediaDiagnostic(scope, 'visible-retry');
     destroyPlayer();
     completedRef.current = false;
     setPlayerReady(false);
+    setSlowConnection(false);
     setShowPlayFallback(false);
     setShowRickroll(false);
     setNeedsResume(false);
     setStatus('Opening important file…');
     setPhase('loading');
     setAttempt((current) => current + 1);
-  }, [destroyPlayer]);
+  }, [destroyPlayer, scope]);
 
   useEffect(() => {
     mountedRef.current = true;
+    logMediaDiagnostic(scope, 'visible-app-mounted');
     return () => {
       mountedRef.current = false;
+      logMediaDiagnostic(scope, 'app-unmounted');
       destroyPlayer();
     };
-  }, [destroyPlayer]);
+  }, [destroyPlayer, scope]);
 
   useEffect(() => {
     minimizedRef.current = minimized;
     if (!minimized) return;
-    const player = playerRef.current;
+    const player = lifetimeRef.current?.readyPlayer();
     if (!player) return;
     const wasPlaying = player.getPlayerState() === window.YT?.PlayerState.PLAYING;
     player.pauseVideo();
+    logMediaDiagnostic(scope, 'minimized-pause');
     if (wasPlaying) {
       setNeedsResume(true);
       setStatus('Playback paused while the window is minimized.');
     }
-  }, [minimized]);
+  }, [minimized, scope]);
+
+  useEffect(() => {
+    if (!mobile) return;
+    const pauseWhenHidden = () => {
+      if (document.visibilityState !== 'hidden') return;
+      const player = lifetimeRef.current?.readyPlayer();
+      lifetimeRef.current?.pause();
+      clearChecks();
+      logMediaDiagnostic(scope, 'visibility-pause', { ready: Boolean(player) });
+      if (player && !completedRef.current) {
+        setNeedsResume(true);
+        setStatus('Playback paused while the app is hidden.');
+      }
+    };
+    document.addEventListener('visibilitychange', pauseWhenHidden);
+    return () => document.removeEventListener('visibilitychange', pauseWhenHidden);
+  }, [mobile, clearChecks, scope]);
 
   useEffect(() => {
     if (phase !== 'loading') return;
@@ -226,9 +260,21 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 
   useEffect(() => {
     if (phase !== 'player' || playerRef.current || !playerHostRef.current) return;
     let cancelled = false;
+    const lifetime = createVideoLifetime<YouTubePlayer>();
+    lifetimeRef.current = lifetime;
+    const isCurrent = () => mountedRef.current && lifetimeRef.current === lifetime && lifetime.isCurrent();
 
     loadYouTubeApi().then((api) => {
-      if (cancelled || !mountedRef.current || !playerHostRef.current) return;
+      if (cancelled || !isCurrent() || !playerHostRef.current) return;
+      // Visible mobile loading remains recoverable. A delayed onReady is not a
+      // YouTube error; keep this instance alive and offer an explicit fresh retry.
+      if (mobile) readyCheckRef.current = window.setTimeout(() => {
+        if (!isCurrent() || lifetime.readyPlayer()) return;
+        logMediaDiagnostic(scope, 'readiness-slow', { attempt });
+        setSlowConnection(true);
+        setStatus('Still connecting to YouTube. You can retry.');
+      }, 12_000);
+      logMediaDiagnostic(scope, 'player-constructor', { attempt, minimized: minimizedRef.current });
       const player = new api.Player(playerHostRef.current, {
         width: '100%',
         height: '100%',
@@ -246,12 +292,16 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 
         },
         events: {
           onReady: ({ target }) => {
-            if (!mountedRef.current) return;
+            if (!isCurrent() || !lifetime.markReady(target)) return;
+            logMediaDiagnostic(scope, 'onReady', { attempt });
+            if (readyCheckRef.current !== null) window.clearTimeout(readyCheckRef.current);
+            readyCheckRef.current = null;
             playerRef.current = target;
             target.setVolume(40);
             target.getIframe().title = 'Official Rick Astley YouTube video player';
             setPlayerReady(true);
-            if (minimizedRef.current) {
+            setSlowConnection(false);
+            if (minimizedRef.current || (mobile && document.hidden)) {
               target.pauseVideo();
               setNeedsResume(true);
               setStatus('Ready and paused. Restore the window to continue.');
@@ -259,9 +309,15 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 
             }
             beginSegment();
           },
-          onStateChange: ({ data }) => {
-            if (!mountedRef.current) return;
+          onStateChange: ({ data, target }) => {
+            if (!isCurrent() || !lifetime.isCurrent(target)) return;
             if (data === api.PlayerState.PLAYING) {
+              logMediaDiagnostic(scope, 'PLAYING', { attempt });
+              if (minimizedRef.current || (mobile && document.hidden)) {
+                lifetime.pause();
+                setNeedsResume(true);
+                return;
+              }
               if (playCheckRef.current !== null) window.clearTimeout(playCheckRef.current);
               playCheckRef.current = null;
               setShowPlayFallback(false);
@@ -272,37 +328,36 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 
             if (data === api.PlayerState.ENDED) completeSegment();
           },
           onError: ({ data }) => {
-            if (import.meta.env.DEV || ['localhost', '127.0.0.1'].includes(window.location.hostname)) {
-              console.warn('YouTube embed error (not autoplay blocking):', data);
-            }
-            if (!mountedRef.current) return;
+            if (!isCurrent()) return;
+            logMediaDiagnostic(scope, 'youtube-error', { code: data, attempt });
             destroyPlayer();
             setPhase('error');
             setStatus('The video could not be loaded.');
           },
           onAutoplayBlocked: () => {
-            if (!mountedRef.current) return;
+            if (!isCurrent() || minimizedRef.current || (mobile && document.hidden)) return;
+            logMediaDiagnostic(scope, 'autoplay-blocked', { attempt });
             setShowPlayFallback(true);
-            setStatus('Autoplay was blocked. Playback needs one more click.');
+            setStatus(mobile ? 'Tap to open file.' : 'Autoplay was blocked. Playback needs one more click.');
           }
         }
       });
-      playerRef.current = player;
+      lifetime.attach(player);
+      if (isCurrent()) playerRef.current = player;
     }).catch((error) => {
-      if (import.meta.env.DEV || ['localhost', '127.0.0.1'].includes(window.location.hostname)) {
-        console.warn('YouTube IFrame API/network loading failed:', error);
-      }
-      if (!cancelled && mountedRef.current) {
+      if (!cancelled && isCurrent()) {
+        logMediaDiagnostic(scope, 'api-or-constructor-failure', { reason: error instanceof Error ? error.message : 'unknown' });
+        destroyPlayer();
         setPhase('error');
         setStatus('The YouTube player could not be loaded.');
       }
     });
 
     return () => { cancelled = true; };
-  }, [attempt, beginSegment, completeSegment, destroyPlayer, phase, startProgressChecks]);
+  }, [attempt, beginSegment, completeSegment, destroyPlayer, phase, startProgressChecks, mobile, scope]);
 
   const playFromFallback = () => {
-    const player = playerRef.current;
+    const player = lifetimeRef.current?.readyPlayer();
     if (!player) return;
     setShowPlayFallback(false);
     setNeedsResume(false);
@@ -310,6 +365,7 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 
     // Keep these calls synchronous with the visitor's tap for iPhone/Safari.
     player.unMute();
     player.setVolume(40);
+    logMediaDiagnostic(scope, 'playVideo', { reason: 'user-tap' });
     player.playVideo();
     schedulePlayFallback();
   };
@@ -337,8 +393,8 @@ export function RickrollPlayer({ minimized, reducedMotion, onClose, playLabel = 
       {(phase === 'player' || phase === 'ended') && (
         <div className="quicktime-stage">
           <div className="youtube-player-host" ref={playerHostRef} />
-          {!playerReady && <div className="player-connecting"><span className="quicktime-spinner" aria-hidden="true" /><span>Connecting to YouTube…</span></div>}
-          {showRickroll && phase !== 'ended' && <div className="rickroll-toast">Yep, you’ve been rickrolled, LOL.</div>}
+          {!playerReady && <div className="player-connecting"><span className="quicktime-spinner" aria-hidden="true" /><span>{slowConnection ? 'Still connecting…' : 'Connecting to YouTube…'}</span>{slowConnection && <button className="secondary-button compact" type="button" onClick={retry}>Try again</button>}</div>}
+          {showRickroll && !mobile && phase !== 'ended' && <div className="rickroll-toast">Yep, you’ve been rickrolled, LOL.</div>}
           {(showPlayFallback || needsResume) && phase !== 'ended' && (
             <button className="player-action-overlay" type="button" onClick={playFromFallback}>
               {needsResume ? 'Resume' : playLabel}
