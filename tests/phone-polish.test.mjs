@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { fittedVerseRailWidth, homePageOffset, phoneVisibleHeight } from '../src/lib/phoneLayout.ts';
+import { fittedVerseRailWidth, homePageOffset, phoneVisibleHeight, reflectionContentRegion } from '../src/lib/phoneLayout.ts';
 import { createPreparedVideo } from '../src/lib/preparedVideo.ts';
 
 const source = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
@@ -44,6 +44,32 @@ test('Page 2 artwork and copy share full rail width, retaining square art and cl
   assert.doesNotMatch(css + home, /mobile-verse-art-size|verseArtworkSize/);
 });
 
+test('Page 2 reserves actual controls plus bottom inset once, independently of layout height', () => {
+  const layout = { contentTop: 47, controlsTop: 600, controlsBottom: 810, shellBottom: 844, bottomInset: 34, viewportBottom: 844 };
+  assert.deepEqual(reflectionContentRegion(layout), { persistentControlsHeight: 244, contentHeight: 553 });
+  // Expanded browser chrome can shrink the visual viewport before the shell/grid updates.
+  assert.deepEqual(reflectionContentRegion({ ...layout, viewportBottom: 664 }), { persistentControlsHeight: 244, contentHeight: 373 });
+  // Trust the rendered controls boundary even if another sizing calculation claims more space.
+  assert.equal(reflectionContentRegion({ ...layout, controlsTop: 580, controlsBottom: 790 }).contentHeight, 533);
+  assert.equal(reflectionContentRegion({ ...layout, viewportBottom: 200 }).contentHeight, 0);
+});
+
+test('only Page 2 gets a measured scrollport and real trailing space; controls stay in grid flow', () => {
+  const css = source('src/styles/mobile-shell.css');
+  const home = source('src/components/adaptive/MobileHomeScreen.tsx');
+  const reflection = css.split('.mobile-home-page--reflection {')[1].split('\n}')[0];
+  assert.match(reflection, /display: block/);
+  assert.match(reflection, /height: min\(100%, var\(--phone-page-content-height, 100%\)\)/);
+  assert.match(reflection, /padding-bottom: 20px/);
+  assert.match(reflection, /scroll-padding-bottom: 20px/);
+  assert.equal(css.match(/--phone-page-content-height/g).length, 1);
+  assert.match(css, /grid-template-rows: minmax\(0, 1fr\) auto auto/);
+  assert.match(home, /\[shell, scroller, controls, dock\]/);
+  assert.match(home, /viewport\?\.addEventListener\('resize', scheduleMeasurement\)/);
+  assert.match(home, /viewport\?\.addEventListener\('scroll', scheduleMeasurement\)/);
+  assert.match(home, /viewport\?\.removeEventListener\('resize', scheduleMeasurement\)/);
+});
+
 test('normal-phone rail fitting keeps the widest fit and never reduces width beyond 8%', () => {
   assert.equal(fittedVerseRailWidth(350, 600, width => width + 240), 350);
   assert.equal(fittedVerseRailWidth(350, 580, width => width + 240), 340);
@@ -58,6 +84,8 @@ test('fit adjustments are Page 2-only, normal-height-only, and retain text/touch
   const home = source('src/components/adaptive/MobileHomeScreen.tsx');
   assert.match(compact, /mobile-home-page--reflection/);
   assert.match(compact, /data-active-page="1"/);
+  assert.match(compact, /--mobile-verse-rail-clearance: 8px/);
+  assert.doesNotMatch(compact.split('.mobile-home-page--reflection {')[1].split('}')[0], /padding-bottom/);
   assert.doesNotMatch(compact, /font-size|line-height|mobile-resume|mobile-primary-grid|mobile-dock/);
   assert.match(home, /if \(!normalPhone\.matches \|\| !page\.clientWidth/);
   assert.match(css, /width: min\(100%, var\(--mobile-verse-rail-width, 100%\)\)/);

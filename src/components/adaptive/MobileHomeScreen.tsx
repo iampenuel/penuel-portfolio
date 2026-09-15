@@ -4,7 +4,7 @@ import type { AdaptiveVerse } from '../../data/adaptiveVerses';
 import { MobileIcon } from './MobileIcon';
 import { MobileVerseWidget } from './MobileVerseWidget';
 import { ResumePreviewWidget } from './ResumePreviewWidget';
-import { fittedVerseRailWidth, homePageOffset } from '../../lib/phoneLayout';
+import { fittedVerseRailWidth, homePageOffset, reflectionContentRegion } from '../../lib/phoneLayout';
 
 const HOME_PAGES = [0, 1] as const;
 export type MobileHomePage = (typeof HOME_PAGES)[number];
@@ -36,7 +36,10 @@ export function MobileHomeScreen({
   onOpenApp: (app: PortfolioAppDefinition) => void;
   onOpenLibrary: () => void;
 }) {
+  const homeRef = useRef<HTMLDivElement>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const controlsRef = useRef<HTMLDivElement>(null);
+  const dockRef = useRef<HTMLElement>(null);
   const activePageRef = useRef(activePage);
   activePageRef.current = activePage;
   const primaryApps = PRIMARY_APP_IDS.map((id) => portfolioAppById[id]);
@@ -70,6 +73,49 @@ export function MobileHomeScreen({
   }, []);
 
   useEffect(() => {
+    const home = homeRef.current;
+    const scroller = scrollerRef.current;
+    const controls = controlsRef.current;
+    const dock = dockRef.current;
+    const shell = home?.closest<HTMLElement>('.mobile-shell');
+    if (!home || !scroller || !controls || !dock || !shell) return;
+    const viewport = window.visualViewport;
+    const measureContentRegion = () => {
+      if (!home.clientWidth) return;
+      // Preserve the existing pinch-zoom behavior instead of shrinking content to defeat zoom.
+      if (viewport && Math.abs(viewport.scale - 1) > 0.01) return;
+      const region = reflectionContentRegion({
+        contentTop: scroller.getBoundingClientRect().top,
+        controlsTop: controls.getBoundingClientRect().top,
+        controlsBottom: dock.getBoundingClientRect().bottom,
+        shellBottom: shell.getBoundingClientRect().bottom,
+        bottomInset: parseFloat(getComputedStyle(shell).paddingBottom),
+        viewportBottom: viewport ? viewport.height + viewport.offsetTop : window.innerHeight
+      });
+      home.style.setProperty('--phone-persistent-controls-height', `${region.persistentControlsHeight}px`);
+      home.style.setProperty('--phone-page-content-height', `${region.contentHeight}px`);
+    };
+    let frame = 0;
+    const scheduleMeasurement = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(measureContentRegion);
+    };
+    measureContentRegion();
+    const observer = new ResizeObserver(scheduleMeasurement);
+    [shell, scroller, controls, dock].forEach((element) => observer.observe(element));
+    viewport?.addEventListener('resize', scheduleMeasurement);
+    viewport?.addEventListener('scroll', scheduleMeasurement);
+    window.addEventListener('resize', scheduleMeasurement);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
+      viewport?.removeEventListener('resize', scheduleMeasurement);
+      viewport?.removeEventListener('scroll', scheduleMeasurement);
+      window.removeEventListener('resize', scheduleMeasurement);
+    };
+  }, [activePage]);
+
+  useEffect(() => {
     const page = scrollerRef.current?.querySelector<HTMLElement>('.mobile-home-page--reflection');
     const widget = page?.querySelector<HTMLElement>('.mobile-verse-widget');
     const copy = page?.querySelector<HTMLElement>('.mobile-verse-copy');
@@ -79,7 +125,10 @@ export function MobileHomeScreen({
       widget.style.removeProperty('--mobile-verse-rail-width');
       if (!normalPhone.matches || !page.clientWidth || !page.clientHeight) return;
       const style = getComputedStyle(page);
-      const availableHeight = page.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom) - 1;
+      // Preserve the approved rail-size preference. The extra trailing breathing room may
+      // scroll; it must not trigger another artwork reduction or determine the scrollport.
+      const railClearance = parseFloat(style.getPropertyValue('--mobile-verse-rail-clearance'));
+      const availableHeight = page.clientHeight - parseFloat(style.paddingTop) - railClearance - 1;
       const fullWidth = widget.getBoundingClientRect().width;
       const width = fittedVerseRailWidth(fullWidth, availableHeight, (candidate) => {
         widget.style.setProperty('--mobile-verse-rail-width', `${candidate}px`);
@@ -105,7 +154,7 @@ export function MobileHomeScreen({
   }, [verse]);
 
   return (
-    <div className="mobile-home-screen" data-active-page={activePage}>
+    <div ref={homeRef} className="mobile-home-screen" data-active-page={activePage}>
       <div
         ref={scrollerRef}
         className="mobile-home-pages"
@@ -145,7 +194,7 @@ export function MobileHomeScreen({
         </section>
       </div>
 
-      <div className="mobile-page-controls">
+      <div ref={controlsRef} className="mobile-page-controls">
         <div className="mobile-page-dots" aria-label="Home Screen page selection">
           {HOME_PAGES.map((page) => (
             <button
@@ -166,7 +215,7 @@ export function MobileHomeScreen({
         </button>
       </div>
 
-      <nav className="mobile-dock" aria-label="Mobile dock">
+      <nav ref={dockRef} className="mobile-dock" aria-label="Mobile dock">
         {dockApps.map((app) => (
           <MobileIcon key={app.id} app={app} variant="dock" onOpen={() => onOpenApp(app)} />
         ))}

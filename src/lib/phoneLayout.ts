@@ -10,6 +10,21 @@ export function phoneVisibleHeight(layoutHeight: number, viewport?: { height: nu
   return Math.min(layoutHeight, viewport.height + Math.max(0, viewport.offsetTop));
 }
 
+/** Reserve the rendered controls and the shell's existing bottom inset exactly once. */
+export function reflectionContentRegion({ contentTop, controlsTop, controlsBottom, shellBottom, bottomInset, viewportBottom }: {
+  contentTop: number;
+  controlsTop: number;
+  controlsBottom: number;
+  shellBottom: number;
+  bottomInset: number;
+  viewportBottom: number;
+}) {
+  const persistentControlsHeight = Math.max(0, controlsBottom - controlsTop) + bottomInset;
+  // A stale layout viewport or grid measurement must never extend content under controls.
+  const contentBottom = Math.min(controlsTop, Math.min(shellBottom, viewportBottom) - persistentControlsHeight);
+  return { persistentControlsHeight, contentHeight: Math.max(0, contentBottom - contentTop) };
+}
+
 /** Pick the widest shared rail that fits, allowing at most an 8% reduction. */
 export function fittedVerseRailWidth(fullWidth: number, availableHeight: number, measureHeight: (width: number) => number) {
   if (measureHeight(fullWidth) <= availableHeight) return fullWidth;

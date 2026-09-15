@@ -188,13 +188,15 @@
 
 .mobile-home-page--reflection {
   --mobile-widget-gap: clamp(12px, 1.6dvh, 14px);
-  display: flex;
-  flex-direction: column;
-  gap: var(--mobile-widget-gap);
+  /* A definite scrollport ends above the measured controls, including during chrome resize.
+     Normal block flow keeps trailing padding in the scroll range (no flex overflow tail). */
+  display: block;
+  height: min(100%, var(--phone-page-content-height, 100%));
+  max-height: 100%;
   padding-top: clamp(12px, 1.5dvh, 16px);
   padding-bottom: 20px;
+  scroll-padding-bottom: 20px;
 }
-.mobile-home-page--reflection > * { flex-shrink: 0; }
 
 .mobile-verse-widget {
   width: min(100%, var(--mobile-verse-rail-width, 100%));
@@ -257,8 +259,8 @@
   /* Distribute the height savings across Page 2, preserving type and touch targets. */
   .mobile-home-page--reflection {
     --mobile-widget-gap: 8px;
+    --mobile-verse-rail-clearance: 8px;
     padding-top: 8px;
-    padding-bottom: 8px;
   }
   .mobile-verse-copy { padding-top: 12px; padding-bottom: 8px; }
   .mobile-verse-copy h2 { margin-top: 4px; }
