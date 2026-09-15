@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { homePageOffset, phoneVisibleHeight } from '../src/lib/phoneLayout.ts';
+import { fittedVerseRailWidth, homePageOffset, phoneVisibleHeight } from '../src/lib/phoneLayout.ts';
 import { createPreparedVideo } from '../src/lib/preparedVideo.ts';
 
 const source = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
@@ -42,6 +42,25 @@ test('Page 2 artwork and copy share full rail width, retaining square art and cl
   assert.match(css, /\.mobile-home-page\s*\{[^}]*overflow-y: auto;/s);
   assert.match(css, /\.mobile-home-page--reflection\s*\{[^}]*padding-bottom: 20px;/s);
   assert.doesNotMatch(css + home, /mobile-verse-art-size|verseArtworkSize/);
+});
+
+test('normal-phone rail fitting keeps the widest fit and never reduces width beyond 8%', () => {
+  assert.equal(fittedVerseRailWidth(350, 600, width => width + 240), 350);
+  assert.equal(fittedVerseRailWidth(350, 580, width => width + 240), 340);
+  // Account for a wrapping threshold rather than assuming narrower always fits better.
+  assert.equal(fittedVerseRailWidth(350, 580, width => width + (width < 342 ? 265 : 240)), 350);
+  assert.equal(fittedVerseRailWidth(350, 500, width => width + 240), 350);
+});
+
+test('fit adjustments are Page 2-only, normal-height-only, and retain text/touch sizes', () => {
+  const css = source('src/styles/mobile-shell.css');
+  const compact = css.split('@media (min-height: 760px) {')[1].split('\n}\n')[0];
+  const home = source('src/components/adaptive/MobileHomeScreen.tsx');
+  assert.match(compact, /mobile-home-page--reflection/);
+  assert.match(compact, /data-active-page="1"/);
+  assert.doesNotMatch(compact, /font-size|line-height|mobile-resume|mobile-primary-grid|mobile-dock/);
+  assert.match(home, /if \(!normalPhone\.matches \|\| !page\.clientWidth/);
+  assert.match(css, /width: min\(100%, var\(--mobile-verse-rail-width, 100%\)\)/);
 });
 
 const segment = { videoId: 'dQw4w9WgXcQ', startSeconds: 42, endSeconds: 60 };

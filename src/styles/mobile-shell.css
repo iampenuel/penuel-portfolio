@@ -197,14 +197,15 @@
 .mobile-home-page--reflection > * { flex-shrink: 0; }
 
 .mobile-verse-widget {
-  width: 100%;
+  width: min(100%, var(--mobile-verse-rail-width, 100%));
+  margin-inline: auto;
   display: flex;
   flex-direction: column;
   gap: var(--mobile-widget-gap);
 }
 .mobile-verse-artwork,
 .mobile-verse-copy {
-  /* One rail: height pressure is handled by scrolling, never a narrower artwork. */
+  /* One shared rail: any fit adjustment applies equally to artwork and copy. */
   width: 100%;
   min-width: 0;
 }
@@ -251,6 +252,19 @@
   cursor: pointer;
 }
 .mobile-verse-copy details p { margin: 4px 0 14px; }
+
+@media (min-height: 760px) {
+  /* Distribute the height savings across Page 2, preserving type and touch targets. */
+  .mobile-home-page--reflection {
+    --mobile-widget-gap: 8px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .mobile-verse-copy { padding-top: 12px; padding-bottom: 8px; }
+  .mobile-verse-copy h2 { margin-top: 4px; }
+  .mobile-verse-copy blockquote { margin-top: 8px; margin-bottom: 4px; }
+  .mobile-home-screen[data-active-page="1"] .mobile-page-controls { gap: 0; }
+}
 
 .mobile-resume-widget {
   width: 100%;

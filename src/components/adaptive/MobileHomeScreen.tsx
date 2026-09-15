@@ -4,7 +4,7 @@ import type { AdaptiveVerse } from '../../data/adaptiveVerses';
 import { MobileIcon } from './MobileIcon';
 import { MobileVerseWidget } from './MobileVerseWidget';
 import { ResumePreviewWidget } from './ResumePreviewWidget';
-import { homePageOffset } from '../../lib/phoneLayout';
+import { fittedVerseRailWidth, homePageOffset } from '../../lib/phoneLayout';
 
 const HOME_PAGES = [0, 1] as const;
 export type MobileHomePage = (typeof HOME_PAGES)[number];
@@ -69,8 +69,43 @@ export function MobileHomeScreen({
     };
   }, []);
 
+  useEffect(() => {
+    const page = scrollerRef.current?.querySelector<HTMLElement>('.mobile-home-page--reflection');
+    const widget = page?.querySelector<HTMLElement>('.mobile-verse-widget');
+    const copy = page?.querySelector<HTMLElement>('.mobile-verse-copy');
+    if (!page || !widget || !copy) return;
+    const normalPhone = window.matchMedia('(min-height: 760px)');
+    const fitSharedRail = () => {
+      widget.style.removeProperty('--mobile-verse-rail-width');
+      if (!normalPhone.matches || !page.clientWidth || !page.clientHeight) return;
+      const style = getComputedStyle(page);
+      const availableHeight = page.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom) - 1;
+      const fullWidth = widget.getBoundingClientRect().width;
+      const width = fittedVerseRailWidth(fullWidth, availableHeight, (candidate) => {
+        widget.style.setProperty('--mobile-verse-rail-width', `${candidate}px`);
+        return widget.getBoundingClientRect().height;
+      });
+      widget.style.setProperty('--mobile-verse-rail-width', `${width}px`);
+    };
+    fitSharedRail();
+    let frame = 0;
+    const scheduleFit = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(fitSharedRail);
+    };
+    const observer = new ResizeObserver(scheduleFit);
+    observer.observe(page);
+    observer.observe(copy);
+    normalPhone.addEventListener('change', scheduleFit);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
+      normalPhone.removeEventListener('change', scheduleFit);
+    };
+  }, [verse]);
+
   return (
-    <div className="mobile-home-screen">
+    <div className="mobile-home-screen" data-active-page={activePage}>
       <div
         ref={scrollerRef}
         className="mobile-home-pages"
