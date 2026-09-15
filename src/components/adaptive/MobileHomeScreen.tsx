@@ -4,7 +4,7 @@ import type { AdaptiveVerse } from '../../data/adaptiveVerses';
 import { MobileIcon } from './MobileIcon';
 import { MobileVerseWidget } from './MobileVerseWidget';
 import { ResumePreviewWidget } from './ResumePreviewWidget';
-import { homePageOffset, verseArtworkSize } from '../../lib/phoneLayout';
+import { homePageOffset } from '../../lib/phoneLayout';
 
 const HOME_PAGES = [0, 1] as const;
 export type MobileHomePage = (typeof HOME_PAGES)[number];
@@ -68,25 +68,6 @@ export function MobileHomeScreen({
       window.removeEventListener('resize', keepPageAligned);
     };
   }, []);
-
-  useEffect(() => {
-    const page = scrollerRef.current?.querySelector<HTMLElement>('.mobile-home-page--reflection');
-    const widget = page?.querySelector<HTMLElement>('.mobile-verse-widget');
-    const copy = page?.querySelector<HTMLElement>('.mobile-verse-copy');
-    if (!page || !widget || !copy) return;
-    const fitArtwork = () => {
-      if (!page.clientWidth || !page.clientHeight) return;
-      const style = getComputedStyle(page);
-      const usableHeight = page.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
-      const size = verseArtworkSize(widget.clientWidth, usableHeight, copy.offsetHeight, parseFloat(getComputedStyle(widget).gap));
-      widget.style.setProperty('--mobile-verse-art-size', `${size}px`);
-    };
-    fitArtwork();
-    const observer = new ResizeObserver(fitArtwork);
-    observer.observe(page);
-    observer.observe(copy);
-    return () => observer.disconnect();
-  }, [verse]);
 
   return (
     <div className="mobile-home-screen">

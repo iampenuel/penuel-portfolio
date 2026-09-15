@@ -1,8 +1,3 @@
-/** Fit the real verse copy first, retaining a useful square on short phones. */
-export function verseArtworkSize(width: number, height: number, copyHeight: number, gap: number) {
-  return Math.min(width, Math.max(Math.min(240, width), height - copyHeight - gap));
-}
-
 /** Snap to the actual rendered page, including fractional rail widths. */
 export function homePageOffset(offsets: number[], page: number) {
   return (offsets[page] ?? offsets[0] ?? 0) - (offsets[0] ?? 0);

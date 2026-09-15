@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { homePageOffset, verseArtworkSize, phoneVisibleHeight } from '../src/lib/phoneLayout.ts';
+import { homePageOffset, phoneVisibleHeight } from '../src/lib/phoneLayout.ts';
 import { createPreparedVideo } from '../src/lib/preparedVideo.ts';
 
 const source = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
@@ -34,11 +34,14 @@ test('visible-height sizing handles expanded chrome and keyboard without interfe
   assert.match(css, /height: min\(100dvh, var\(--mobile-visible-height, 100dvh\)\)/);
 });
 
-test('verse artwork uses recovered space, stays square-sized and meaningful on short phones', () => {
-  assert.equal(verseArtworkSize(347, 580, 200, 22), 347);
-  assert.equal(verseArtworkSize(347, 580, 290, 22), 268);
-  assert.equal(verseArtworkSize(285, 280, 320, 18), 240);
-  assert.equal(verseArtworkSize(200, 280, 320, 18), 200);
+test('Page 2 artwork and copy share full rail width, retaining square art and clean scrolling', () => {
+  const css = source('src/styles/mobile-shell.css');
+  const home = source('src/components/adaptive/MobileHomeScreen.tsx');
+  assert.match(css, /\.mobile-verse-artwork,\s*\.mobile-verse-copy\s*\{[^}]*width: 100%;/s);
+  assert.match(css, /\.mobile-verse-artwork\s*\{[^}]*aspect-ratio: 1;/s);
+  assert.match(css, /\.mobile-home-page\s*\{[^}]*overflow-y: auto;/s);
+  assert.match(css, /\.mobile-home-page--reflection\s*\{[^}]*padding-bottom: 20px;/s);
+  assert.doesNotMatch(css + home, /mobile-verse-art-size|verseArtworkSize/);
 });
 
 const segment = { videoId: 'dQw4w9WgXcQ', startSeconds: 42, endSeconds: 60 };

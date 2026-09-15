@@ -187,22 +187,28 @@
 }
 
 .mobile-home-page--reflection {
-  --mobile-widget-gap: clamp(18px, 2.7dvh, 24px);
+  --mobile-widget-gap: clamp(12px, 1.6dvh, 14px);
   display: flex;
   flex-direction: column;
   gap: var(--mobile-widget-gap);
+  padding-top: clamp(12px, 1.5dvh, 16px);
   padding-bottom: 20px;
 }
 .mobile-home-page--reflection > * { flex-shrink: 0; }
 
 .mobile-verse-widget {
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: var(--mobile-widget-gap);
 }
+.mobile-verse-artwork,
+.mobile-verse-copy {
+  /* One rail: height pressure is handled by scrolling, never a narrower artwork. */
+  width: 100%;
+  min-width: 0;
+}
 .mobile-verse-artwork {
-  width: min(100%, var(--mobile-verse-art-size, 100%));
-  align-self: center;
   aspect-ratio: 1;
   overflow: hidden;
   border-radius: 26px;
