@@ -54,6 +54,27 @@ test('Page 2 reserves actual controls plus bottom inset once, independently of l
   assert.equal(reflectionContentRegion({ ...layout, viewportBottom: 200 }).contentHeight, 0);
 });
 
+test('immersive Page 2 releases the controls height, retaining only the safe bottom inset', () => {
+  const layout = { contentTop: 47, shellBottom: 844, bottomInset: 34, viewportBottom: 844 };
+  assert.deepEqual(reflectionContentRegion(layout), { persistentControlsHeight: 34, contentHeight: 763 });
+  assert.deepEqual(reflectionContentRegion({ ...layout, viewportBottom: 664 }), { persistentControlsHeight: 34, contentHeight: 583 });
+});
+
+test('Page 2 unmounts the lower controls but retains the pager and keyboard return path', () => {
+  const home = source('src/components/adaptive/MobileHomeScreen.tsx');
+  const css = source('src/styles/mobile-shell.css');
+  const controls = home.split('{activePage === 0 && <>')[1].split('</>}')[0];
+  assert.match(controls, /mobile-page-controls/);
+  assert.match(controls, /mobile-library-trigger/);
+  assert.match(controls, /mobile-dock/);
+  assert.doesNotMatch(controls, /mobile-home-pages|MobileVerseWidget/);
+  assert.match(home, /scroller\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(home, /scroller\.clientWidth !== previousWidth/);
+  assert.match(home, /event\.key === 'ArrowLeft'/);
+  assert.match(home, /event\.key === 'ArrowRight'/);
+  assert.match(css, /\.mobile-home-screen\[data-active-page="1"\]\s*\{ grid-template-rows: minmax\(0, 1fr\); \}/);
+});
+
 test('only Page 2 gets a measured scrollport and real trailing space; controls stay in grid flow', () => {
   const css = source('src/styles/mobile-shell.css');
   const home = source('src/components/adaptive/MobileHomeScreen.tsx');
@@ -83,7 +104,6 @@ test('fit adjustments are Page 2-only, normal-height-only, and retain text/touch
   const compact = css.split('@media (min-height: 760px) {')[1].split('\n}\n')[0];
   const home = source('src/components/adaptive/MobileHomeScreen.tsx');
   assert.match(compact, /mobile-home-page--reflection/);
-  assert.match(compact, /data-active-page="1"/);
   assert.match(compact, /--mobile-verse-rail-clearance: 8px/);
   assert.doesNotMatch(compact.split('.mobile-home-page--reflection {')[1].split('}')[0], /padding-bottom/);
   assert.doesNotMatch(compact, /font-size|line-height|mobile-resume|mobile-primary-grid|mobile-dock/);

@@ -86,6 +86,9 @@
   padding-bottom: 0;
 }
 
+/* Page 1 keeps its original three rows; immersive Page 2 has no control rows. */
+.mobile-home-screen[data-active-page="1"] { grid-template-rows: minmax(0, 1fr); }
+
 .mobile-home-pages {
   width: 100%;
   min-width: 0;
@@ -265,7 +268,6 @@
   .mobile-verse-copy { padding-top: 12px; padding-bottom: 8px; }
   .mobile-verse-copy h2 { margin-top: 4px; }
   .mobile-verse-copy blockquote { margin-top: 8px; margin-bottom: 4px; }
-  .mobile-home-screen[data-active-page="1"] .mobile-page-controls { gap: 0; }
 }
 
 .mobile-resume-widget {

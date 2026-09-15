@@ -13,15 +13,18 @@ export function phoneVisibleHeight(layoutHeight: number, viewport?: { height: nu
 /** Reserve the rendered controls and the shell's existing bottom inset exactly once. */
 export function reflectionContentRegion({ contentTop, controlsTop, controlsBottom, shellBottom, bottomInset, viewportBottom }: {
   contentTop: number;
-  controlsTop: number;
-  controlsBottom: number;
+  controlsTop?: number;
+  controlsBottom?: number;
   shellBottom: number;
   bottomInset: number;
   viewportBottom: number;
 }) {
-  const persistentControlsHeight = Math.max(0, controlsBottom - controlsTop) + bottomInset;
+  // Immersive Page 2 has no controls: reserve only the existing safe/browser bottom inset.
+  const controlsHeight = controlsTop !== undefined && controlsBottom !== undefined
+    ? Math.max(0, controlsBottom - controlsTop) : 0;
+  const persistentControlsHeight = controlsHeight + bottomInset;
   // A stale layout viewport or grid measurement must never extend content under controls.
-  const contentBottom = Math.min(controlsTop, Math.min(shellBottom, viewportBottom) - persistentControlsHeight);
+  const contentBottom = Math.min(controlsTop ?? Infinity, Math.min(shellBottom, viewportBottom) - persistentControlsHeight);
   return { persistentControlsHeight, contentHeight: Math.max(0, contentBottom - contentTop) };
 }
 

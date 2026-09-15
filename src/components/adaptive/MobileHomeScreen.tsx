@@ -50,17 +50,24 @@ export function MobileHomeScreen({
 
   const moveToPage = (page: MobileHomePage) => {
     const scroller = scrollerRef.current;
-    if (scroller) scroller.scrollTo({ left: pageOffset(scroller, page), behavior: 'auto' });
+    if (scroller) {
+      scroller.scrollTo({ left: pageOffset(scroller, page), behavior: 'auto' });
+      // Page 2 unmounts the dots; keep keyboard navigation on the surviving pager.
+      scroller.focus({ preventScroll: true });
+    }
     onPageChange(page);
   };
 
   useEffect(() => {
-    // Realign only on entry/resize; page-dot updates must not interrupt a native swipe.
+    // Realign only on entry/width changes. Removing Page 2 controls changes height,
+    // which must not snap or interrupt an in-progress horizontal swipe.
+    let previousWidth = 0;
     const keepPageAligned = () => {
       const scroller = scrollerRef.current;
-      if (scroller && scroller.clientWidth > 0) {
+      if (scroller && scroller.clientWidth > 0 && scroller.clientWidth !== previousWidth) {
         scroller.scrollLeft = pageOffset(scroller, activePageRef.current);
       }
+      previousWidth = scroller?.clientWidth ?? 0;
     };
     keepPageAligned();
     const observer = new ResizeObserver(keepPageAligned);
@@ -78,7 +85,7 @@ export function MobileHomeScreen({
     const controls = controlsRef.current;
     const dock = dockRef.current;
     const shell = home?.closest<HTMLElement>('.mobile-shell');
-    if (!home || !scroller || !controls || !dock || !shell) return;
+    if (!home || !scroller || !shell) return;
     const viewport = window.visualViewport;
     const measureContentRegion = () => {
       if (!home.clientWidth) return;
@@ -86,8 +93,8 @@ export function MobileHomeScreen({
       if (viewport && Math.abs(viewport.scale - 1) > 0.01) return;
       const region = reflectionContentRegion({
         contentTop: scroller.getBoundingClientRect().top,
-        controlsTop: controls.getBoundingClientRect().top,
-        controlsBottom: dock.getBoundingClientRect().bottom,
+        controlsTop: controls?.getBoundingClientRect().top,
+        controlsBottom: dock?.getBoundingClientRect().bottom,
         shellBottom: shell.getBoundingClientRect().bottom,
         bottomInset: parseFloat(getComputedStyle(shell).paddingBottom),
         viewportBottom: viewport ? viewport.height + viewport.offsetTop : window.innerHeight
@@ -102,7 +109,9 @@ export function MobileHomeScreen({
     };
     measureContentRegion();
     const observer = new ResizeObserver(scheduleMeasurement);
-    [shell, scroller, controls, dock].forEach((element) => observer.observe(element));
+    [shell, scroller, controls, dock].forEach((element) => {
+      if (element) observer.observe(element);
+    });
     viewport?.addEventListener('resize', scheduleMeasurement);
     viewport?.addEventListener('scroll', scheduleMeasurement);
     window.addEventListener('resize', scheduleMeasurement);
@@ -194,6 +203,7 @@ export function MobileHomeScreen({
         </section>
       </div>
 
+      {activePage === 0 && <>
       <div ref={controlsRef} className="mobile-page-controls">
         <div className="mobile-page-dots" aria-label="Home Screen page selection">
           {HOME_PAGES.map((page) => (
@@ -220,6 +230,7 @@ export function MobileHomeScreen({
           <MobileIcon key={app.id} app={app} variant="dock" onOpen={() => onOpenApp(app)} />
         ))}
       </nav>
+      </>}
     </div>
   );
 }
