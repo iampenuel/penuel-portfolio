@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { closestHomePage, fittedVerseRailWidth, homePageOffset, observeHomePageSettled, phoneVisibleHeight, reflectionContentRegion } from '../src/lib/phoneLayout.ts';
-import { createPreparedVideo } from '../src/lib/preparedVideo.ts';
+import { createVideoLifetime } from '../src/lib/videoLifetime.ts';
 
 const source = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
@@ -155,63 +155,113 @@ test('fit adjustments are Page 2-only, normal-height-only, and retain text/touch
   assert.match(css, /width: min\(100%, var\(--mobile-verse-rail-width, 100%\)\)/);
 });
 
-const segment = { videoId: 'dQw4w9WgXcQ', startSeconds: 42, endSeconds: 60 };
 function mockPlayer(calls) {
   return {
-    cueVideoById: value => calls.push(['cue', value]),
     pauseVideo: () => calls.push('pause'),
+    stopVideo: () => calls.push('stop'),
+    destroy: () => calls.push('destroy'),
     unMute: () => calls.push('unmute'),
     setVolume: volume => calls.push(['volume', volume]),
     playVideo: () => calls.push('play')
   };
 }
 
-test('idle preparation only cues; the original tap synchronously unmutes and plays', () => {
+test('visible player exposes playback only after readiness, without hidden cueing', () => {
   const calls = [];
-  const controller = createPreparedVideo(segment);
-  controller.attach(mockPlayer(calls));
-  assert.deepEqual(calls, [['cue', segment]]);
-  assert.equal(controller.isRequested(), false);
-  controller.openFromGesture();
-  assert.deepEqual(calls.slice(1), ['unmute', ['volume', 40], 'play']);
-  assert.equal(controller.isRequested(), true);
-});
-
-test('close cancels pending launch, pauses and re-cues; reopening uses the same player', () => {
-  const calls = [];
-  const controller = createPreparedVideo(segment);
-  controller.openFromGesture();
-  controller.close();
-  controller.attach(mockPlayer(calls));
-  assert.deepEqual(calls, [['cue', segment]]);
-  controller.openFromGesture();
-  controller.close();
-  assert.deepEqual(calls.slice(-2), ['pause', ['cue', segment]]);
-  controller.openFromGesture();
-  assert.deepEqual(calls.slice(-3), ['unmute', ['volume', 40], 'play']);
-  controller.detach();
-  const count = calls.length;
-  controller.close();
-  assert.equal(calls.length, count);
-});
-
-test('early tap attempts playback on ready without playing before user intent', () => {
-  const calls = [];
-  const controller = createPreparedVideo(segment);
-  controller.openFromGesture();
+  const lifetime = createVideoLifetime();
+  const player = mockPlayer(calls);
+  lifetime.attach(player);
+  assert.equal(lifetime.readyPlayer(), null);
   assert.deepEqual(calls, []);
-  controller.attach(mockPlayer(calls));
-  assert.deepEqual(calls, [['cue', segment], 'unmute', ['volume', 40], 'play']);
+  assert.equal(lifetime.markReady(player), true);
+  lifetime.readyPlayer().playVideo();
+  assert.deepEqual(calls, ['play']);
 });
 
-test('phone launch reveals the resident frame synchronously and warming is deferred', () => {
+test('close during readiness destroys the instance and ignores a late onReady', () => {
+  const calls = [];
+  const lifetime = createVideoLifetime();
+  const player = mockPlayer(calls);
+  lifetime.attach(player);
+  lifetime.dispose();
+  assert.equal(lifetime.markReady(player), false);
+  assert.equal(lifetime.readyPlayer(), null);
+  assert.equal(lifetime.isCurrent(player), false);
+  lifetime.dispose();
+  assert.deepEqual(calls, ['stop', 'destroy']);
+});
+
+test('close before API resolution destroys any late constructor result without playing', () => {
+  const calls = [];
+  const lifetime = createVideoLifetime();
+  lifetime.dispose();
+  lifetime.attach(mockPlayer(calls));
+  assert.deepEqual(calls, ['stop', 'destroy']);
+  assert.equal(lifetime.readyPlayer(), null);
+});
+
+test('retry/reopen owns a fresh player and rejects events from the failed instance', () => {
+  const oldCalls = [], newCalls = [];
+  const old = createVideoLifetime(), next = createVideoLifetime();
+  const oldPlayer = mockPlayer(oldCalls), nextPlayer = mockPlayer(newCalls);
+  old.attach(oldPlayer);
+  old.markReady(oldPlayer);
+  old.dispose();
+  next.attach(nextPlayer);
+  assert.equal(old.isCurrent(oldPlayer), false);
+  assert.equal(next.markReady(oldPlayer), false);
+  assert.equal(next.markReady(nextPlayer), true);
+  next.readyPlayer().playVideo();
+  assert.deepEqual(oldCalls, ['stop', 'destroy']);
+  assert.deepEqual(newCalls, ['play']);
+});
+
+test('visibility pause is safe before readiness and preserves the ready player for an explicit resume', () => {
+  const calls = [], lifetime = createVideoLifetime(), player = mockPlayer(calls);
+  lifetime.attach(player);
+  lifetime.pause();
+  assert.deepEqual(calls, []);
+  lifetime.markReady(player);
+  lifetime.pause();
+  lifetime.readyPlayer().playVideo();
+  assert.deepEqual(calls, ['pause', 'play']);
+  lifetime.dispose();
+  lifetime.pause();
+  assert.deepEqual(calls, ['pause', 'play', 'stop', 'destroy']);
+});
+
+test('failed stop cannot skip destruction of a failed or pre-ready player', () => {
+  const calls = [], lifetime = createVideoLifetime();
+  lifetime.attach({ ...mockPlayer(calls), stopVideo() { throw new Error('not ready'); } });
+  assert.doesNotThrow(() => lifetime.dispose());
+  assert.deepEqual(calls, ['destroy']);
+});
+
+test('mobile opens a visible on-demand player; Home owns no preload, hidden iframe or launch queue', () => {
   const shell = source('src/components/adaptive/MobileShell.tsx');
   const player = source('src/components/RickrollPlayer.tsx');
-  assert.match(shell, /flushSync\([\s\S]*rickrollLaunchRef\.current\?\.openFromGesture\(\)/);
-  assert.match(shell, /requestIdleCallback/);
-  assert.match(shell, /}, 1_500\)/);
-  assert.match(shell, /inert=\{!rickrollOpen \|\| !isActive\}/);
-  assert.match(player, /autoplay: prepareAtIdle \? 0 : 1/);
-  assert.match(player, /showRickroll && !prepareAtIdle/);
+  const host = source('src/components/adaptive/MobileAppHost.tsx');
+  const css = source('src/styles/mobile-shell.css');
+  assert.doesNotMatch(shell + host + player + css, /prepareAtIdle|prepareRickroll|mobile-prepared-app|flushSync|RickrollLaunch|cueVideoById|openFromGesture/);
+  assert.match(shell, /\{previewAppId \? \(/);
+  assert.match(host, /appId === 'definitely-important' && isActive && <RickrollPlayer/);
+  assert.match(player, /autoplay: 1/);
+  assert.match(player, /showRickroll && !mobile/);
   assert.match(player, /visibilitychange/);
+  assert.match(player, /if \(cancelled \|\| !isCurrent\(\) \|\| !playerHostRef\.current\) return/);
+  assert.match(player, /if \(!isCurrent\(\) \|\| !lifetime\.markReady\(target\)\) return/);
+});
+
+test('visible readiness delay remains recoverable and does not manufacture Player Unavailable', () => {
+  const player = source('src/components/RickrollPlayer.tsx');
+  const watchdog = player.split('if (mobile) readyCheckRef.current = window.setTimeout(() => {')[1].split('}, 12_000)')[0];
+  assert.match(watchdog, /setSlowConnection\(true\)/);
+  assert.doesNotMatch(watchdog, /destroyPlayer|dispose\(|setPhase\('error'\)/);
+  assert.match(player, /slowConnection && <button[^>]*onClick=\{retry\}>Try again/);
+  assert.match(player, /setPlayerReady\(true\);\s*setSlowConnection\(false\)/);
+  const lifetime = createVideoLifetime(), target = mockPlayer([]);
+  lifetime.attach(target);
+  assert.equal(lifetime.readyPlayer(), null);
+  assert.equal(lifetime.markReady(target), true);
+  assert.equal(lifetime.readyPlayer(), target);
 });

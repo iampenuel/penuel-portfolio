@@ -20,10 +20,6 @@
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-/* Keep the prepared iframe resident and sized; only the requested app is exposed. */
-.mobile-prepared-app { position: absolute; inset: env(safe-area-inset-top) 0 var(--mobile-bottom-inset); display: flex; }
-.mobile-prepared-app[data-open="false"] { opacity: 0; pointer-events: none; z-index: -1; }
-
 .mobile-status-bar {
   min-height: 52px;
   flex: none;

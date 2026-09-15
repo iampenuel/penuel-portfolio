@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState, type Ref } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { portfolioAppById, type PortfolioAppId } from '../../data/portfolioApps';
 import { projects, type Project } from '../../data/projects';
 import { fieldNotePath, type PortfolioRoute } from '../../lib/portfolioRoutes';
 import { AboutWindow, ExperienceWindow, ProjectDetailWindow } from '../PortfolioContent';
 import { ContactWindow } from '../ContactWindow';
 import { FieldNotesWindow } from '../FieldNotesWindow';
-import { RickrollPlayer, type RickrollLaunch } from '../RickrollPlayer';
+import { RickrollPlayer } from '../RickrollPlayer';
 import { MobileResumeApp } from './MobileResumeApp';
 
-export function MobileAppHost({ appId, route, onHome, onNavigate, onOpenApp, isActive, reducedMotion, rickrollLaunchRef }: {
+export function MobileAppHost({ appId, route, onHome, onNavigate, onOpenApp, isActive, reducedMotion }: {
   appId: PortfolioAppId;
   route: PortfolioRoute;
   onHome: () => void;
@@ -16,7 +16,6 @@ export function MobileAppHost({ appId, route, onHome, onNavigate, onOpenApp, isA
   onOpenApp: (id: PortfolioAppId) => void;
   isActive: boolean;
   reducedMotion: boolean;
-  rickrollLaunchRef?: Ref<RickrollLaunch>;
 }) {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [contactCloseRequest, setContactCloseRequest] = useState(0);
@@ -55,7 +54,7 @@ export function MobileAppHost({ appId, route, onHome, onNavigate, onOpenApp, isA
         {appId === 'experience' && <ExperienceWindow />}
         {appId === 'field-notes' && <FieldNotesWindow idPrefix="mobile" selectedSlug={route.fieldNoteSlug} onSelectNote={(slug) => onNavigate(fieldNotePath(slug))} onBackToIndex={() => onNavigate(fieldNotePath())} />}
         {appId === 'contact' && <ContactWindow idPrefix="mobile" closeRequest={contactCloseRequest} minimized={!isActive} onClose={onHome} />}
-        {appId === 'definitely-important' && <RickrollPlayer idPrefix="mobile" minimized={!isActive} reducedMotion={reducedMotion} onClose={onHome} playLabel="Tap to open file" prepareAtIdle={Boolean(rickrollLaunchRef)} launchRef={rickrollLaunchRef} />}
+        {appId === 'definitely-important' && isActive && <RickrollPlayer idPrefix="mobile" mobile minimized={!isActive} reducedMotion={reducedMotion} onClose={onHome} playLabel="Tap to open file" />}
       </div>
     </section>
   );

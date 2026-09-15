@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { flushSync } from 'react-dom';
-import type { RickrollLaunch } from '../RickrollPlayer';
-import { logPhoneMediaTiming } from '../../lib/phoneMediaDiagnostics';
+import { logMediaDiagnostic } from '../../lib/phoneMediaDiagnostics';
 import { phoneVisibleHeight } from '../../lib/phoneLayout';
 import { portfolioApps, type PortfolioAppId } from '../../data/portfolioApps';
 import { adaptiveVerseForReference } from '../../data/adaptiveVerses';
@@ -26,10 +24,7 @@ export function MobileShell({ route, onNavigate }: { route: PortfolioRoute; onNa
   const [now, setNow] = useState<Date | null>(null);
   const [isActive, setIsActive] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const [prepareRickroll, setPrepareRickroll] = useState(false);
-  const rickrollLaunchRef = useRef<RickrollLaunch>(null);
   const shellRef = useRef<HTMLElement>(null);
-  const rickrollOpen = previewAppId === 'definitely-important';
   const verse = useMemo(() => now ? adaptiveVerseForReference(verseForDate(now).reference) : null, [now]);
 
   useEffect(() => {
@@ -52,27 +47,6 @@ export function MobileShell({ route, onNavigate }: { route: PortfolioRoute; onNa
       motion.removeEventListener('change', sync);
     };
   }, []);
-
-  useEffect(() => {
-    if (!isActive || previewAppId || libraryOpen || prepareRickroll) return;
-    logPhoneMediaTiming('home-interactive');
-    let idle: number | undefined;
-    // Home paints and hydrates first. Cueing loads the player/thumbnail, not playback.
-    const timer = window.setTimeout(() => {
-      const prepare = () => {
-        if (!document.hidden) {
-          logPhoneMediaTiming('prepare');
-          setPrepareRickroll(true);
-        }
-      };
-      if ('requestIdleCallback' in window) idle = window.requestIdleCallback(prepare, { timeout: 1_500 });
-      else prepare();
-    }, 1_500);
-    return () => {
-      window.clearTimeout(timer);
-      if (idle !== undefined) window.cancelIdleCallback(idle);
-    };
-  }, [isActive, previewAppId, libraryOpen, prepareRickroll]);
 
   useEffect(() => {
     if (!isActive) return;
@@ -110,15 +84,7 @@ export function MobileShell({ route, onNavigate }: { route: PortfolioRoute; onNa
 
   const openApp = (app: (typeof portfolioApps)[number]) => {
     if (app.id === 'definitely-important') {
-      logPhoneMediaTiming('app-tap');
-      // Reveal the already-cued iframe before calling play, all in this click stack.
-      flushSync(() => {
-        setPrepareRickroll(true);
-        setLibraryOpen(false);
-        setPreviewAppId(app.id);
-      });
-      rickrollLaunchRef.current?.openFromGesture();
-      return;
+      logMediaDiagnostic('mobile', 'app-tap');
     }
     setLibraryOpen(false);
     if (app.route) {
@@ -129,6 +95,7 @@ export function MobileShell({ route, onNavigate }: { route: PortfolioRoute; onNa
   };
 
   const goHome = () => {
+    if (previewAppId === 'definitely-important') logMediaDiagnostic('mobile', 'home-close');
     if (route.appId) onNavigate('/');
     else {
       setPreviewAppId(null);
@@ -138,12 +105,7 @@ export function MobileShell({ route, onNavigate }: { route: PortfolioRoute; onNa
 
   return (
     <main ref={shellRef} className="mobile-shell" aria-label="Penuel's mobile portfolio">
-      {prepareRickroll && (
-        <div className="mobile-prepared-app" data-open={rickrollOpen && isActive} aria-hidden={!rickrollOpen || !isActive} inert={!rickrollOpen || !isActive}>
-          <MobileAppHost appId="definitely-important" route={route} onHome={goHome} onNavigate={onNavigate} onOpenApp={setPreviewAppId} isActive={isActive && rickrollOpen} reducedMotion={reducedMotion} rickrollLaunchRef={rickrollLaunchRef} />
-        </div>
-      )}
-      {rickrollOpen ? null : previewAppId ? (
+      {previewAppId ? (
         <MobileAppHost key={previewAppId} appId={previewAppId} route={route} onHome={goHome} onNavigate={onNavigate} onOpenApp={setPreviewAppId} isActive={isActive} reducedMotion={reducedMotion} />
       ) : libraryOpen ? (
         <MobileAppLibrary onHome={() => setLibraryOpen(false)} onOpenApp={openApp} />
