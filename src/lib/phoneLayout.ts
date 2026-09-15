@@ -3,6 +3,33 @@ export function homePageOffset(offsets: number[], page: number) {
   return (offsets[page] ?? offsets[0] ?? 0) - (offsets[0] ?? 0);
 }
 
+/** Resolve a settled snap using offsets cached on resize, not measurements during a swipe. */
+export function closestHomePage(offsets: number[], position: number) {
+  return offsets.reduce((closest, offset, index) =>
+    Math.abs(position - offset) < Math.abs(position - offsets[closest]) ? index : closest, 0);
+}
+
+/** Native scrollend includes momentum/snap completion; older browsers use a quiet-scroll fallback. */
+export function observeHomePageSettled(scroller: HTMLElement, onSettled: () => void) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const nativeScrollEnd = Reflect.has(scroller, 'onscrollend');
+  const settle = () => {
+    clearTimeout(timer);
+    onSettled();
+  };
+  const schedule = () => {
+    clearTimeout(timer);
+    timer = setTimeout(settle, 160);
+  };
+  scroller.addEventListener('scrollend', settle);
+  if (!nativeScrollEnd) scroller.addEventListener('scroll', schedule, { passive: true });
+  return () => {
+    clearTimeout(timer);
+    scroller.removeEventListener('scrollend', settle);
+    scroller.removeEventListener('scroll', schedule);
+  };
+}
+
 /** Follow browser chrome/keyboard, but never reflow the layout to defeat pinch zoom. */
 export function phoneVisibleHeight(layoutHeight: number, viewport?: { height: number; offsetTop: number; scale: number }) {
   if (!viewport) return layoutHeight;

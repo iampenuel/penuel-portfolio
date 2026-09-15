@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { fittedVerseRailWidth, homePageOffset, phoneVisibleHeight, reflectionContentRegion } from '../src/lib/phoneLayout.ts';
+import { closestHomePage, fittedVerseRailWidth, homePageOffset, observeHomePageSettled, phoneVisibleHeight, reflectionContentRegion } from '../src/lib/phoneLayout.ts';
 import { createPreparedVideo } from '../src/lib/preparedVideo.ts';
 
 const source = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
@@ -60,10 +60,10 @@ test('immersive Page 2 releases the controls height, retaining only the safe bot
   assert.deepEqual(reflectionContentRegion({ ...layout, viewportBottom: 664 }), { persistentControlsHeight: 34, contentHeight: 583 });
 });
 
-test('Page 2 unmounts the lower controls but retains the pager and keyboard return path', () => {
+test('Page 1 owns its controls inside a stable full-height pager, independent of settled state', () => {
   const home = source('src/components/adaptive/MobileHomeScreen.tsx');
   const css = source('src/styles/mobile-shell.css');
-  const controls = home.split('{activePage === 0 && <>')[1].split('</>}')[0];
+  const controls = home.split('className="mobile-home-page-frame"')[1].split('</section>')[0];
   assert.match(controls, /mobile-page-controls/);
   assert.match(controls, /mobile-library-trigger/);
   assert.match(controls, /mobile-dock/);
@@ -72,7 +72,51 @@ test('Page 2 unmounts the lower controls but retains the pager and keyboard retu
   assert.match(home, /scroller\.clientWidth !== previousWidth/);
   assert.match(home, /event\.key === 'ArrowLeft'/);
   assert.match(home, /event\.key === 'ArrowRight'/);
-  assert.match(css, /\.mobile-home-screen\[data-active-page="1"\]\s*\{ grid-template-rows: minmax\(0, 1fr\); \}/);
+  assert.match(css, /\.mobile-home-screen\s*\{[^}]*grid-template-rows: minmax\(0, 1fr\);/s);
+  assert.match(css, /\.mobile-home-page-frame\s*\{[^}]*grid-template-rows: minmax\(0, 1fr\) auto auto;/s);
+  assert.doesNotMatch(css, /data-active-page/);
+  assert.doesNotMatch(home, /activePage === 0|onScroll=|\}, \[activePage\]\)/);
+  assert.match(home, /prefers-reduced-motion: reduce/);
+  assert.match(home, /\? 'auto' : 'smooth'/);
+});
+
+test('settled snap selection handles both directions, cancelled drags, and fractional offsets', () => {
+  assert.equal(closestHomePage([0, 390], 389.8), 1);
+  assert.equal(closestHomePage([0, 390], 0.2), 0);
+  assert.equal(closestHomePage([0, 390], -15), 0);
+  assert.equal(closestHomePage([0, 390], 410), 1);
+  assert.equal(closestHomePage([0, 347.109375], 347.1), 1);
+  assert.equal(closestHomePage([], 0), 0);
+});
+
+test('native scrollend commits state only after the gesture and snap settle', () => {
+  const scroller = Object.assign(new EventTarget(), { onscrollend: null });
+  let calls = 0;
+  const dispose = observeHomePageSettled(scroller, () => calls++);
+  for (let i = 0; i < 10; i++) scroller.dispatchEvent(new Event('scroll'));
+  assert.equal(calls, 0);
+  scroller.dispatchEvent(new Event('scrollend'));
+  assert.equal(calls, 1);
+  dispose();
+  scroller.dispatchEvent(new Event('scrollend'));
+  assert.equal(calls, 1);
+});
+
+test('older-browser fallback debounces scroll and cleans up pending settlement', async () => {
+  const scroller = new EventTarget();
+  let calls = 0;
+  const dispose = observeHomePageSettled(scroller, () => calls++);
+  scroller.dispatchEvent(new Event('scroll'));
+  await new Promise(resolve => setTimeout(resolve, 100));
+  scroller.dispatchEvent(new Event('scroll'));
+  await new Promise(resolve => setTimeout(resolve, 100));
+  assert.equal(calls, 0);
+  await new Promise(resolve => setTimeout(resolve, 100));
+  assert.equal(calls, 1);
+  scroller.dispatchEvent(new Event('scroll'));
+  dispose();
+  await new Promise(resolve => setTimeout(resolve, 180));
+  assert.equal(calls, 1);
 });
 
 test('only Page 2 gets a measured scrollport and real trailing space; controls stay in grid flow', () => {
@@ -85,7 +129,7 @@ test('only Page 2 gets a measured scrollport and real trailing space; controls s
   assert.match(reflection, /scroll-padding-bottom: 20px/);
   assert.equal(css.match(/--phone-page-content-height/g).length, 1);
   assert.match(css, /grid-template-rows: minmax\(0, 1fr\) auto auto/);
-  assert.match(home, /\[shell, scroller, controls, dock\]/);
+  assert.match(home, /\[shell, scroller\]/);
   assert.match(home, /viewport\?\.addEventListener\('resize', scheduleMeasurement\)/);
   assert.match(home, /viewport\?\.addEventListener\('scroll', scheduleMeasurement\)/);
   assert.match(home, /viewport\?\.removeEventListener\('resize', scheduleMeasurement\)/);

@@ -4,7 +4,7 @@ import type { AdaptiveVerse } from '../../data/adaptiveVerses';
 import { MobileIcon } from './MobileIcon';
 import { MobileVerseWidget } from './MobileVerseWidget';
 import { ResumePreviewWidget } from './ResumePreviewWidget';
-import { fittedVerseRailWidth, homePageOffset, reflectionContentRegion } from '../../lib/phoneLayout';
+import { closestHomePage, fittedVerseRailWidth, homePageOffset, observeHomePageSettled, reflectionContentRegion } from '../../lib/phoneLayout';
 
 const HOME_PAGES = [0, 1] as const;
 export type MobileHomePage = (typeof HOME_PAGES)[number];
@@ -38,34 +38,33 @@ export function MobileHomeScreen({
 }) {
   const homeRef = useRef<HTMLDivElement>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
-  const controlsRef = useRef<HTMLDivElement>(null);
-  const dockRef = useRef<HTMLElement>(null);
+  const pageOffsetsRef = useRef<number[]>([0]);
   const activePageRef = useRef(activePage);
   activePageRef.current = activePage;
   const primaryApps = PRIMARY_APP_IDS.map((id) => portfolioAppById[id]);
   const dockApps = DOCK_APP_IDS.map((id) => portfolioAppById[id]);
-  const pageOffset = (scroller: HTMLDivElement, page: number) => homePageOffset(
-    Array.from(scroller.children, (child) => (child as HTMLElement).offsetLeft), page
-  );
 
   const moveToPage = (page: MobileHomePage) => {
     const scroller = scrollerRef.current;
     if (scroller) {
-      scroller.scrollTo({ left: pageOffset(scroller, page), behavior: 'auto' });
-      // Page 2 unmounts the dots; keep keyboard navigation on the surviving pager.
+      scroller.scrollTo({
+        left: pageOffsetsRef.current[page] ?? 0,
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+      });
+      // Keep keyboard return navigation on the pager as Page 1 slides out of view.
       scroller.focus({ preventScroll: true });
     }
-    onPageChange(page);
   };
 
   useEffect(() => {
-    // Realign only on entry/width changes. Removing Page 2 controls changes height,
-    // which must not snap or interrupt an in-progress horizontal swipe.
+    // Cache snap offsets and realign only on entry/width changes, never while paging.
     let previousWidth = 0;
     const keepPageAligned = () => {
       const scroller = scrollerRef.current;
       if (scroller && scroller.clientWidth > 0 && scroller.clientWidth !== previousWidth) {
-        scroller.scrollLeft = pageOffset(scroller, activePageRef.current);
+        const offsets = Array.from(scroller.children, (child) => (child as HTMLElement).offsetLeft);
+        pageOffsetsRef.current = offsets.map((_, page) => homePageOffset(offsets, page));
+        scroller.scrollLeft = pageOffsetsRef.current[activePageRef.current] ?? 0;
       }
       previousWidth = scroller?.clientWidth ?? 0;
     };
@@ -80,10 +79,21 @@ export function MobileHomeScreen({
   }, []);
 
   useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    return observeHomePageSettled(scroller, () => {
+      if (!scroller.clientWidth) return;
+      const page = clampPage(closestHomePage(pageOffsetsRef.current, scroller.scrollLeft));
+      if (page !== activePageRef.current) {
+        activePageRef.current = page;
+        onPageChange(page);
+      }
+    });
+  }, [onPageChange]);
+
+  useEffect(() => {
     const home = homeRef.current;
     const scroller = scrollerRef.current;
-    const controls = controlsRef.current;
-    const dock = dockRef.current;
     const shell = home?.closest<HTMLElement>('.mobile-shell');
     if (!home || !scroller || !shell) return;
     const viewport = window.visualViewport;
@@ -93,8 +103,6 @@ export function MobileHomeScreen({
       if (viewport && Math.abs(viewport.scale - 1) > 0.01) return;
       const region = reflectionContentRegion({
         contentTop: scroller.getBoundingClientRect().top,
-        controlsTop: controls?.getBoundingClientRect().top,
-        controlsBottom: dock?.getBoundingClientRect().bottom,
         shellBottom: shell.getBoundingClientRect().bottom,
         bottomInset: parseFloat(getComputedStyle(shell).paddingBottom),
         viewportBottom: viewport ? viewport.height + viewport.offsetTop : window.innerHeight
@@ -109,9 +117,7 @@ export function MobileHomeScreen({
     };
     measureContentRegion();
     const observer = new ResizeObserver(scheduleMeasurement);
-    [shell, scroller, controls, dock].forEach((element) => {
-      if (element) observer.observe(element);
-    });
+    [shell, scroller].forEach((element) => observer.observe(element));
     viewport?.addEventListener('resize', scheduleMeasurement);
     viewport?.addEventListener('scroll', scheduleMeasurement);
     window.addEventListener('resize', scheduleMeasurement);
@@ -122,7 +128,7 @@ export function MobileHomeScreen({
       viewport?.removeEventListener('scroll', scheduleMeasurement);
       window.removeEventListener('resize', scheduleMeasurement);
     };
-  }, [activePage]);
+  }, []);
 
   useEffect(() => {
     const page = scrollerRef.current?.querySelector<HTMLElement>('.mobile-home-page--reflection');
@@ -180,57 +186,49 @@ export function MobileHomeScreen({
             moveToPage(clampPage(activePage - 1));
           }
         }}
-        onScroll={(event) => {
-          const scroller = event.currentTarget;
-          // Hidden mobile shells have zero width during tablet/desktop orientation changes.
-          if (scroller.clientWidth === 0) return;
-          const page = HOME_PAGES.reduce((closest, candidate) =>
-            Math.abs(scroller.scrollLeft - pageOffset(scroller, candidate)) < Math.abs(scroller.scrollLeft - pageOffset(scroller, closest)) ? candidate : closest, 0);
-          if (page !== activePage) onPageChange(page);
-        }}
       >
-        <section className="mobile-home-page mobile-home-page--portfolio" aria-label="Home Screen page 1 of 2">
-          <nav className="mobile-primary-grid" aria-label="Portfolio apps">
-            {primaryApps.map((app) => (
-              <MobileIcon key={app.id} app={app} directExternal onOpen={() => onOpenApp(app)} />
+        <section className="mobile-home-page-frame" aria-label="Home Screen page 1 of 2">
+          <div className="mobile-home-page mobile-home-page--portfolio">
+            <nav className="mobile-primary-grid" aria-label="Portfolio apps">
+              {primaryApps.map((app) => (
+                <MobileIcon key={app.id} app={app} directExternal onOpen={() => onOpenApp(app)} />
+              ))}
+            </nav>
+            <ResumePreviewWidget onOpen={() => onOpenApp(portfolioAppById.resume)} />
+          </div>
+
+          <div className="mobile-page-controls">
+            <div className="mobile-page-dots" aria-label="Home Screen page selection">
+              {HOME_PAGES.map((page) => (
+                <button
+                  key={page}
+                  type="button"
+                  aria-label={`Page ${page + 1} of ${HOME_PAGES.length}`}
+                  aria-current={activePage === page ? 'page' : undefined}
+                  onClick={() => moveToPage(page)}
+                ><span aria-hidden="true" /></button>
+              ))}
+            </div>
+            <button className="mobile-library-trigger" type="button" onClick={onOpenLibrary} aria-label="Search apps">
+              <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                <circle cx="8.5" cy="8.5" r="5.5" />
+                <path d="m12.5 12.5 4 4" />
+              </svg>
+              <span>Search</span>
+            </button>
+          </div>
+
+          <nav className="mobile-dock" aria-label="Mobile dock">
+            {dockApps.map((app) => (
+              <MobileIcon key={app.id} app={app} variant="dock" onOpen={() => onOpenApp(app)} />
             ))}
           </nav>
-          <ResumePreviewWidget onOpen={() => onOpenApp(portfolioAppById.resume)} />
         </section>
 
         <section className="mobile-home-page mobile-home-page--reflection" aria-label="Home Screen page 2 of 2">
           <MobileVerseWidget verse={verse} />
         </section>
       </div>
-
-      {activePage === 0 && <>
-      <div ref={controlsRef} className="mobile-page-controls">
-        <div className="mobile-page-dots" aria-label="Home Screen page selection">
-          {HOME_PAGES.map((page) => (
-            <button
-              key={page}
-              type="button"
-              aria-label={`Page ${page + 1} of ${HOME_PAGES.length}`}
-              aria-current={activePage === page ? 'page' : undefined}
-              onClick={() => moveToPage(page)}
-            ><span aria-hidden="true" /></button>
-          ))}
-        </div>
-        <button className="mobile-library-trigger" type="button" onClick={onOpenLibrary} aria-label="Search apps">
-          <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
-            <circle cx="8.5" cy="8.5" r="5.5" />
-            <path d="m12.5 12.5 4 4" />
-          </svg>
-          <span>Search</span>
-        </button>
-      </div>
-
-      <nav ref={dockRef} className="mobile-dock" aria-label="Mobile dock">
-        {dockApps.map((app) => (
-          <MobileIcon key={app.id} app={app} variant="dock" onOpen={() => onOpenApp(app)} />
-        ))}
-      </nav>
-      </>}
     </div>
   );
 }
