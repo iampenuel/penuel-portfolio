@@ -400,6 +400,49 @@ a { color: inherit; }
 .cert-logo img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .cert-card h3 { font-size: 15px; }
 
+/* Desktop Experience refinement only; shared phone interiors retain their approved styling. */
+.desktop .experience-shell :is(.experience-card, .simple-card, .award-card, .cert-card) {
+  border-color: rgba(255,255,255,.10);
+  background: rgba(255,255,255,.035);
+}
+.desktop .experience-shell :is(.experience-card, .cert-card).featured {
+  border-color: var(--window-border);
+  background: var(--window-panel);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+}
+.desktop .experience-shell .tab-bar button {
+  padding: 6px 11px;
+  border: 1px solid transparent;
+  color: var(--muted);
+}
+.desktop .experience-shell .tab-bar button:hover:not(.active) {
+  background: rgba(255,255,255,.05);
+  color: var(--text);
+}
+.desktop .experience-shell .tab-bar button.active {
+  background: rgba(255,255,255,.12);
+  border-color: var(--window-border);
+  color: var(--text);
+}
+.desktop .experience-shell .tab-bar button:focus:not(:focus-visible) { outline: none; }
+.desktop .experience-shell .tab-bar button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.desktop .experience-shell .experience-card > img { padding: 4px; }
+.desktop .experience-shell .section-logo { padding: 5px; }
+.desktop .experience-shell .cert-logo { padding: 3px; background: white; }
+.desktop .experience-shell .award-logo { align-self: start; aspect-ratio: 1; min-height: 0; padding: 8px; }
+.desktop .experience-shell .award-logo img { width: 100%; height: 100%; max-width: 100%; max-height: 100%; }
+.desktop .experience-shell img[data-logo-treatment='fill'],
+.desktop .experience-shell :is(.cert-logo, .award-logo)[data-logo-treatment='fill'] {
+  padding: 0;
+  background: var(--window-bg);
+  overflow: hidden;
+}
+.desktop .experience-shell img[data-logo-treatment='fill'],
+.desktop .experience-shell [data-logo-treatment='fill'] > img {
+  /* Only reviewed full-tile artwork: crop spare background edges, never stretch the mark. */
+  object-fit: cover;
+}
+
 .resume-shell { height: 100%; display: grid; grid-template-rows: 54px 1fr; background: #303033; }
 .resume-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 1px solid rgba(255,255,255,.1); }
 .resume-toolbar div { display: grid; gap: 1px; }
