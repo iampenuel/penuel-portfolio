@@ -237,14 +237,20 @@ test('failed stop cannot skip destruction of a failed or pre-ready player', () =
   assert.deepEqual(calls, ['destroy']);
 });
 
-test('mobile opens a visible on-demand player; Home owns no preload, hidden iframe or launch queue', () => {
+test('phone owns a separate prepared media layer; desktop keeps its existing playback path', () => {
   const shell = source('src/components/adaptive/MobileShell.tsx');
   const player = source('src/components/RickrollPlayer.tsx');
   const host = source('src/components/adaptive/MobileAppHost.tsx');
-  const css = source('src/styles/mobile-shell.css');
-  assert.doesNotMatch(shell + host + player + css, /prepareAtIdle|prepareRickroll|mobile-prepared-app|flushSync|RickrollLaunch|cueVideoById|openFromGesture/);
+  const css = source('src/styles/mobile-rickroll.css');
+  const phone = source('src/components/adaptive/MobileRickroll.tsx');
+  assert.doesNotMatch(shell + host + phone + css, /prepareAtIdle|mobile-prepared-app|z-index: -1|visibility: hidden|inert/);
   assert.match(shell, /\{previewAppId \? \(/);
-  assert.match(host, /appId === 'definitely-important' && isActive && <RickrollPlayer/);
+  assert.match(shell, /rickroll\.openFromGesture\(\(\) => flushSync/);
+  assert.doesNotMatch(host, /<RickrollPlayer/);
+  assert.match(phone, /autoplay: 0/);
+  assert.match(phone, /playsinline: 1/);
+  assert.match(phone, /strict-origin-when-cross-origin/);
+  assert.match(css, /min-height: 200px/);
   assert.match(player, /autoplay: 1/);
   assert.match(player, /showRickroll && !mobile/);
   assert.match(player, /visibilitychange/);

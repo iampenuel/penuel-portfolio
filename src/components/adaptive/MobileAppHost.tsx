@@ -5,17 +5,15 @@ import { fieldNotePath, type PortfolioRoute } from '../../lib/portfolioRoutes';
 import { AboutWindow, ExperienceWindow, ProjectDetailWindow } from '../PortfolioContent';
 import { ContactWindow } from '../ContactWindow';
 import { FieldNotesWindow } from '../FieldNotesWindow';
-import { RickrollPlayer } from '../RickrollPlayer';
 import { MobileResumeApp } from './MobileResumeApp';
 
-export function MobileAppHost({ appId, route, onHome, onNavigate, onOpenApp, isActive, reducedMotion }: {
+export function MobileAppHost({ appId, route, onHome, onNavigate, onOpenApp, isActive }: {
   appId: PortfolioAppId;
   route: PortfolioRoute;
   onHome: () => void;
   onNavigate: (pathname: string) => void;
   onOpenApp: (id: PortfolioAppId) => void;
   isActive: boolean;
-  reducedMotion: boolean;
 }) {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [contactCloseRequest, setContactCloseRequest] = useState(0);
@@ -39,7 +37,7 @@ export function MobileAppHost({ appId, route, onHome, onNavigate, onOpenApp, isA
         <h1 id={titleId} ref={titleRef} tabIndex={-1}>{app.label}</h1>
         {selectedProject && <button type="button" onClick={() => setSelectedProject(null)}>‹ Projects</button>}
       </nav>
-      <div ref={contentRef} className={`mobile-content-body${pane ? ' mobile-content-body--pane' : ''}`}>
+      <div ref={contentRef} data-rickroll-body={appId === 'definitely-important' ? '' : undefined} className={`mobile-content-body${pane ? ' mobile-content-body--pane' : ''}`}>
         {appId === 'projects' && (selectedProject ? <ProjectDetailWindow project={selectedProject} /> : (
           <div className="mobile-project-list" aria-label="Portfolio projects">
             {projects.map((project) => (
@@ -54,7 +52,6 @@ export function MobileAppHost({ appId, route, onHome, onNavigate, onOpenApp, isA
         {appId === 'experience' && <ExperienceWindow />}
         {appId === 'field-notes' && <FieldNotesWindow idPrefix="mobile" selectedSlug={route.fieldNoteSlug} onSelectNote={(slug) => onNavigate(fieldNotePath(slug))} onBackToIndex={() => onNavigate(fieldNotePath())} />}
         {appId === 'contact' && <ContactWindow idPrefix="mobile" closeRequest={contactCloseRequest} minimized={!isActive} onClose={onHome} />}
-        {appId === 'definitely-important' && isActive && <RickrollPlayer idPrefix="mobile" mobile minimized={!isActive} reducedMotion={reducedMotion} onClose={onHome} playLabel="Tap to open file" />}
       </div>
     </section>
   );

@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const player = readFileSync(new URL('../src/components/RickrollPlayer.tsx', import.meta.url), 'utf8');
-const host = readFileSync(new URL('../src/components/adaptive/MobileAppHost.tsx', import.meta.url), 'utf8');
+const host = readFileSync(new URL('../src/components/adaptive/MobileRickroll.tsx', import.meta.url), 'utf8');
 const lifetime = readFileSync(new URL('../src/lib/videoLifetime.ts', import.meta.url), 'utf8');
 
 test('mobile Rickroll keeps inline playback and a synchronous sound-enabled tap fallback', () => {
   assert.match(player, /playsinline: 1/);
-  assert.match(host, /playLabel="Tap to open file"/);
+  assert.match(host, />Tap to open file</);
   const handler = player.split('const playFromFallback = () => {')[1].split('\n  };')[0];
   assert.match(handler, /player\.unMute\(\);[\s\S]*player\.setVolume\(40\);[\s\S]*player\.playVideo\(\);/);
   assert.doesNotMatch(handler, /await|setTimeout|window\.open|location\./);

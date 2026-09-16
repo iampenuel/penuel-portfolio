@@ -1,0 +1,28 @@
+/* Only the phone media host moves. It never changes Home/pager geometry. */
+.mobile-rickroll-layer {
+  position: absolute;
+  z-index: 2;
+  top: calc(env(safe-area-inset-top) + 50px);
+  height: calc(100% - env(safe-area-inset-top) - var(--mobile-bottom-inset) - 50px);
+  left: calc(100% + 24px);
+  width: 100%;
+  min-height: 200px;
+  padding: 12px;
+  overflow: auto;
+  overflow-x: hidden;
+  background: #111113;
+  pointer-events: none;
+  display: grid;
+  align-items: center;
+}
+.mobile-rickroll-layer[data-open="true"] { left: 0; pointer-events: auto; }
+.mobile-rickroll-composition { position: relative; min-width: 0; display: grid; gap: 12px; }
+.mobile-rickroll-stage { width: 100%; min-height: 200px; }
+.mobile-rickroll-stage[data-present="false"] { position: absolute; left: calc(100% + 48px); top: 0; }
+.mobile-rickroll-status { text-align: center; }
+.mobile-rickroll-status:empty { display: none; }
+.mobile-rickroll-opening { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; font-size: 14px; color: #d6d6db; }
+.mobile-rickroll-end { display: grid; gap: 18px; padding: 24px 12px; }
+.mobile-rickroll-end > div { display: flex; justify-content: center; gap: 10px; }
+.mobile-rickroll-status .quicktime-error { text-align: left; }
+.mobile-rickroll-layer button:focus-visible, .mobile-rickroll-layer a:focus-visible { outline: 3px solid #5ac8fa; outline-offset: 3px; }
