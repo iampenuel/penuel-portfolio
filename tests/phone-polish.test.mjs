@@ -1,0 +1,273 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { closestHomePage, fittedVerseRailWidth, homePageOffset, observeHomePageSettled, phoneVisibleHeight, reflectionContentRegion } from '../src/lib/phoneLayout.ts';
+import { createVideoLifetime } from '../src/lib/videoLifetime.ts';
+
+const source = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+
+test('phone removes synthetic status UI and shares a centered dynamic-viewport rail', () => {
+  const shell = source('src/components/adaptive/MobileShell.tsx');
+  const css = source('src/styles/mobile-shell.css');
+  assert.doesNotMatch(shell, /MobileStatusBar|mobile-status-bar/);
+  assert.match(css, /height: 100dvh/);
+  assert.match(css, /margin-inline: auto/);
+  assert.match(css, /\.mobile-library-search input\s*\{[^}]*font-size: 16px/s);
+  assert.doesNotMatch(css, /translateX\(/);
+});
+
+test('snap offsets use actual page starts, independent of ancestor gutters', () => {
+  assert.equal(homePageOffset([21, 411], 0), 0);
+  assert.equal(homePageOffset([21, 411], 1), 390);
+  assert.equal(homePageOffset([34, 409], 1), 375);
+  assert.equal(homePageOffset([], 0), 0);
+});
+
+test('visible-height sizing handles expanded chrome and keyboard without interfering with zoom', () => {
+  assert.equal(phoneVisibleHeight(844, { height: 664, offsetTop: 0, scale: 1 }), 664);
+  assert.equal(phoneVisibleHeight(844, { height: 812, offsetTop: 0, scale: 1 }), 812);
+  assert.equal(phoneVisibleHeight(844, { height: 350, offsetTop: 90, scale: 1 }), 440);
+  assert.equal(phoneVisibleHeight(844, { height: 422, offsetTop: 0, scale: 2 }), null);
+  assert.equal(phoneVisibleHeight(568), 568);
+  const css = source('src/styles/mobile-shell.css');
+  assert.match(css, /--mobile-bottom-inset: calc\(env\(safe-area-inset-bottom\) \+ var\(--mobile-bottom-breathing-room\)\)/);
+  assert.match(css, /height: min\(100dvh, var\(--mobile-visible-height, 100dvh\)\)/);
+});
+
+test('Page 2 artwork and copy share full rail width, retaining square art and clean scrolling', () => {
+  const css = source('src/styles/mobile-shell.css');
+  const home = source('src/components/adaptive/MobileHomeScreen.tsx');
+  assert.match(css, /\.mobile-verse-artwork,\s*\.mobile-verse-copy\s*\{[^}]*width: 100%;/s);
+  assert.match(css, /\.mobile-verse-artwork\s*\{[^}]*aspect-ratio: 1;/s);
+  assert.match(css, /\.mobile-home-page\s*\{[^}]*overflow-y: auto;/s);
+  assert.match(css, /\.mobile-home-page--reflection\s*\{[^}]*padding-bottom: 20px;/s);
+  assert.doesNotMatch(css + home, /mobile-verse-art-size|verseArtworkSize/);
+});
+
+test('Page 2 reserves actual controls plus bottom inset once, independently of layout height', () => {
+  const layout = { contentTop: 47, controlsTop: 600, controlsBottom: 810, shellBottom: 844, bottomInset: 34, viewportBottom: 844 };
+  assert.deepEqual(reflectionContentRegion(layout), { persistentControlsHeight: 244, contentHeight: 553 });
+  // Expanded browser chrome can shrink the visual viewport before the shell/grid updates.
+  assert.deepEqual(reflectionContentRegion({ ...layout, viewportBottom: 664 }), { persistentControlsHeight: 244, contentHeight: 373 });
+  // Trust the rendered controls boundary even if another sizing calculation claims more space.
+  assert.equal(reflectionContentRegion({ ...layout, controlsTop: 580, controlsBottom: 790 }).contentHeight, 533);
+  assert.equal(reflectionContentRegion({ ...layout, viewportBottom: 200 }).contentHeight, 0);
+});
+
+test('immersive Page 2 releases the controls height, retaining only the safe bottom inset', () => {
+  const layout = { contentTop: 47, shellBottom: 844, bottomInset: 34, viewportBottom: 844 };
+  assert.deepEqual(reflectionContentRegion(layout), { persistentControlsHeight: 34, contentHeight: 763 });
+  assert.deepEqual(reflectionContentRegion({ ...layout, viewportBottom: 664 }), { persistentControlsHeight: 34, contentHeight: 583 });
+});
+
+test('Page 1 owns its controls inside a stable full-height pager, independent of settled state', () => {
+  const home = source('src/components/adaptive/MobileHomeScreen.tsx');
+  const css = source('src/styles/mobile-shell.css');
+  const controls = home.split('className="mobile-home-page-frame"')[1].split('</section>')[0];
+  assert.match(controls, /mobile-page-controls/);
+  assert.match(controls, /mobile-library-trigger/);
+  assert.match(controls, /mobile-dock/);
+  assert.doesNotMatch(controls, /mobile-home-pages|MobileVerseWidget/);
+  assert.match(home, /scroller\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(home, /scroller\.clientWidth !== previousWidth/);
+  assert.match(home, /event\.key === 'ArrowLeft'/);
+  assert.match(home, /event\.key === 'ArrowRight'/);
+  assert.match(css, /\.mobile-home-screen\s*\{[^}]*grid-template-rows: minmax\(0, 1fr\);/s);
+  assert.match(css, /\.mobile-home-page-frame\s*\{[^}]*grid-template-rows: minmax\(0, 1fr\) auto auto;/s);
+  assert.doesNotMatch(css, /data-active-page/);
+  assert.doesNotMatch(home, /activePage === 0|onScroll=|\}, \[activePage\]\)/);
+  assert.match(home, /prefers-reduced-motion: reduce/);
+  assert.match(home, /\? 'auto' : 'smooth'/);
+});
+
+test('settled snap selection handles both directions, cancelled drags, and fractional offsets', () => {
+  assert.equal(closestHomePage([0, 390], 389.8), 1);
+  assert.equal(closestHomePage([0, 390], 0.2), 0);
+  assert.equal(closestHomePage([0, 390], -15), 0);
+  assert.equal(closestHomePage([0, 390], 410), 1);
+  assert.equal(closestHomePage([0, 347.109375], 347.1), 1);
+  assert.equal(closestHomePage([], 0), 0);
+});
+
+test('native scrollend commits state only after the gesture and snap settle', () => {
+  const scroller = Object.assign(new EventTarget(), { onscrollend: null });
+  let calls = 0;
+  const dispose = observeHomePageSettled(scroller, () => calls++);
+  for (let i = 0; i < 10; i++) scroller.dispatchEvent(new Event('scroll'));
+  assert.equal(calls, 0);
+  scroller.dispatchEvent(new Event('scrollend'));
+  assert.equal(calls, 1);
+  dispose();
+  scroller.dispatchEvent(new Event('scrollend'));
+  assert.equal(calls, 1);
+});
+
+test('older-browser fallback debounces scroll and cleans up pending settlement', async () => {
+  const scroller = new EventTarget();
+  let calls = 0;
+  const dispose = observeHomePageSettled(scroller, () => calls++);
+  scroller.dispatchEvent(new Event('scroll'));
+  await new Promise(resolve => setTimeout(resolve, 100));
+  scroller.dispatchEvent(new Event('scroll'));
+  await new Promise(resolve => setTimeout(resolve, 100));
+  assert.equal(calls, 0);
+  await new Promise(resolve => setTimeout(resolve, 100));
+  assert.equal(calls, 1);
+  scroller.dispatchEvent(new Event('scroll'));
+  dispose();
+  await new Promise(resolve => setTimeout(resolve, 180));
+  assert.equal(calls, 1);
+});
+
+test('only Page 2 gets a measured scrollport and real trailing space; controls stay in grid flow', () => {
+  const css = source('src/styles/mobile-shell.css');
+  const home = source('src/components/adaptive/MobileHomeScreen.tsx');
+  const reflection = css.split('.mobile-home-page--reflection {')[1].split('\n}')[0];
+  assert.match(reflection, /display: block/);
+  assert.match(reflection, /height: min\(100%, var\(--phone-page-content-height, 100%\)\)/);
+  assert.match(reflection, /padding-bottom: 20px/);
+  assert.match(reflection, /scroll-padding-bottom: 20px/);
+  assert.equal(css.match(/--phone-page-content-height/g).length, 1);
+  assert.match(css, /grid-template-rows: minmax\(0, 1fr\) auto auto/);
+  assert.match(home, /\[shell, scroller\]/);
+  assert.match(home, /viewport\?\.addEventListener\('resize', scheduleMeasurement\)/);
+  assert.match(home, /viewport\?\.addEventListener\('scroll', scheduleMeasurement\)/);
+  assert.match(home, /viewport\?\.removeEventListener\('resize', scheduleMeasurement\)/);
+});
+
+test('normal-phone rail fitting keeps the widest fit and never reduces width beyond 8%', () => {
+  assert.equal(fittedVerseRailWidth(350, 600, width => width + 240), 350);
+  assert.equal(fittedVerseRailWidth(350, 580, width => width + 240), 340);
+  // Account for a wrapping threshold rather than assuming narrower always fits better.
+  assert.equal(fittedVerseRailWidth(350, 580, width => width + (width < 342 ? 265 : 240)), 350);
+  assert.equal(fittedVerseRailWidth(350, 500, width => width + 240), 350);
+});
+
+test('fit adjustments are Page 2-only, normal-height-only, and retain text/touch sizes', () => {
+  const css = source('src/styles/mobile-shell.css');
+  const compact = css.split('@media (min-height: 760px) {')[1].split('\n}\n')[0];
+  const home = source('src/components/adaptive/MobileHomeScreen.tsx');
+  assert.match(compact, /mobile-home-page--reflection/);
+  assert.match(compact, /--mobile-verse-rail-clearance: 8px/);
+  assert.doesNotMatch(compact.split('.mobile-home-page--reflection {')[1].split('}')[0], /padding-bottom/);
+  assert.doesNotMatch(compact, /font-size|line-height|mobile-resume|mobile-primary-grid|mobile-dock/);
+  assert.match(home, /if \(!normalPhone\.matches \|\| !page\.clientWidth/);
+  assert.match(css, /width: min\(100%, var\(--mobile-verse-rail-width, 100%\)\)/);
+});
+
+function mockPlayer(calls) {
+  return {
+    pauseVideo: () => calls.push('pause'),
+    stopVideo: () => calls.push('stop'),
+    destroy: () => calls.push('destroy'),
+    unMute: () => calls.push('unmute'),
+    setVolume: volume => calls.push(['volume', volume]),
+    playVideo: () => calls.push('play')
+  };
+}
+
+test('visible player exposes playback only after readiness, without hidden cueing', () => {
+  const calls = [];
+  const lifetime = createVideoLifetime();
+  const player = mockPlayer(calls);
+  lifetime.attach(player);
+  assert.equal(lifetime.readyPlayer(), null);
+  assert.deepEqual(calls, []);
+  assert.equal(lifetime.markReady(player), true);
+  lifetime.readyPlayer().playVideo();
+  assert.deepEqual(calls, ['play']);
+});
+
+test('close during readiness destroys the instance and ignores a late onReady', () => {
+  const calls = [];
+  const lifetime = createVideoLifetime();
+  const player = mockPlayer(calls);
+  lifetime.attach(player);
+  lifetime.dispose();
+  assert.equal(lifetime.markReady(player), false);
+  assert.equal(lifetime.readyPlayer(), null);
+  assert.equal(lifetime.isCurrent(player), false);
+  lifetime.dispose();
+  assert.deepEqual(calls, ['stop', 'destroy']);
+});
+
+test('close before API resolution destroys any late constructor result without playing', () => {
+  const calls = [];
+  const lifetime = createVideoLifetime();
+  lifetime.dispose();
+  lifetime.attach(mockPlayer(calls));
+  assert.deepEqual(calls, ['stop', 'destroy']);
+  assert.equal(lifetime.readyPlayer(), null);
+});
+
+test('retry/reopen owns a fresh player and rejects events from the failed instance', () => {
+  const oldCalls = [], newCalls = [];
+  const old = createVideoLifetime(), next = createVideoLifetime();
+  const oldPlayer = mockPlayer(oldCalls), nextPlayer = mockPlayer(newCalls);
+  old.attach(oldPlayer);
+  old.markReady(oldPlayer);
+  old.dispose();
+  next.attach(nextPlayer);
+  assert.equal(old.isCurrent(oldPlayer), false);
+  assert.equal(next.markReady(oldPlayer), false);
+  assert.equal(next.markReady(nextPlayer), true);
+  next.readyPlayer().playVideo();
+  assert.deepEqual(oldCalls, ['stop', 'destroy']);
+  assert.deepEqual(newCalls, ['play']);
+});
+
+test('visibility pause is safe before readiness and preserves the ready player for an explicit resume', () => {
+  const calls = [], lifetime = createVideoLifetime(), player = mockPlayer(calls);
+  lifetime.attach(player);
+  lifetime.pause();
+  assert.deepEqual(calls, []);
+  lifetime.markReady(player);
+  lifetime.pause();
+  lifetime.readyPlayer().playVideo();
+  assert.deepEqual(calls, ['pause', 'play']);
+  lifetime.dispose();
+  lifetime.pause();
+  assert.deepEqual(calls, ['pause', 'play', 'stop', 'destroy']);
+});
+
+test('failed stop cannot skip destruction of a failed or pre-ready player', () => {
+  const calls = [], lifetime = createVideoLifetime();
+  lifetime.attach({ ...mockPlayer(calls), stopVideo() { throw new Error('not ready'); } });
+  assert.doesNotThrow(() => lifetime.dispose());
+  assert.deepEqual(calls, ['destroy']);
+});
+
+test('phone owns a separate prepared media layer; desktop keeps its existing playback path', () => {
+  const shell = source('src/components/adaptive/MobileShell.tsx');
+  const player = source('src/components/RickrollPlayer.tsx');
+  const host = source('src/components/adaptive/MobileAppHost.tsx');
+  const css = source('src/styles/mobile-rickroll.css');
+  const phone = source('src/components/adaptive/MobileRickroll.tsx');
+  assert.doesNotMatch(shell + host + phone + css, /prepareAtIdle|mobile-prepared-app|z-index: -1|visibility: hidden|inert/);
+  assert.match(shell, /\{previewAppId \? \(/);
+  assert.match(shell, /rickroll\.openFromGesture\(\(\) => flushSync/);
+  assert.doesNotMatch(host, /<RickrollPlayer/);
+  assert.match(phone, /autoplay: 0/);
+  assert.match(phone, /playsinline: 1/);
+  assert.match(phone, /strict-origin-when-cross-origin/);
+  assert.match(css, /min-height: 200px/);
+  assert.match(player, /autoplay: 1/);
+  assert.match(player, /showRickroll && !mobile/);
+  assert.match(player, /visibilitychange/);
+  assert.match(player, /if \(cancelled \|\| !isCurrent\(\) \|\| !playerHostRef\.current\) return/);
+  assert.match(player, /if \(!isCurrent\(\) \|\| !lifetime\.markReady\(target\)\) return/);
+});
+
+test('visible readiness delay remains recoverable and does not manufacture Player Unavailable', () => {
+  const player = source('src/components/RickrollPlayer.tsx');
+  const watchdog = player.split('if (mobile) readyCheckRef.current = window.setTimeout(() => {')[1].split('}, 12_000)')[0];
+  assert.match(watchdog, /setSlowConnection\(true\)/);
+  assert.doesNotMatch(watchdog, /destroyPlayer|dispose\(|setPhase\('error'\)/);
+  assert.match(player, /slowConnection && <button[^>]*onClick=\{retry\}>Try again/);
+  assert.match(player, /setPlayerReady\(true\);\s*setSlowConnection\(false\)/);
+  const lifetime = createVideoLifetime(), target = mockPlayer([]);
+  lifetime.attach(target);
+  assert.equal(lifetime.readyPlayer(), null);
+  assert.equal(lifetime.markReady(target), true);
+  assert.equal(lifetime.readyPlayer(), target);
+});
