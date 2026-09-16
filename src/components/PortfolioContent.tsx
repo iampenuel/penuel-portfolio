@@ -81,7 +81,7 @@ export function ExperienceWindow() {
     <div className="experience-shell">
       <nav className="tab-bar" aria-label="Experience sections">
         {(['Experience', 'Leadership', 'Awards', 'Certifications'] as const).map((item) => (
-          <button className={tab === item ? 'active' : ''} key={item} onClick={() => setTab(item)}>{item}</button>
+          <button type="button" aria-pressed={tab === item} className={tab === item ? 'active' : ''} key={item} onClick={() => setTab(item)}>{item}</button>
         ))}
       </nav>
       <div className="experience-scroll">
@@ -89,7 +89,7 @@ export function ExperienceWindow() {
           <div className="timeline">
             {experience.map((item) => (
               <article className={`experience-card ${item.emphasis === 'featured' ? 'featured' : ''}`} key={item.id}>
-                {item.logo && <img src={item.logo} alt="" />}
+                {item.logo && <img src={item.logo} alt="" data-logo-treatment={item.logoTreatment ?? 'mark'} />}
                 <div>
                   <span className="experience-date">{item.dates}</span>
                   <h3>{item.role}</h3>
@@ -103,18 +103,18 @@ export function ExperienceWindow() {
         )}
         {tab === 'Leadership' && leadership.map((item) => (
           <article className="simple-card leadership-card" key={item.organization}>
-            <img className="section-logo" src={item.logo} alt="InterVarsity logo" />
+            <img className="section-logo" src={item.logo} alt="InterVarsity logo" data-logo-treatment={item.logoTreatment} />
             <div><span>{item.dates}</span><h3>{item.role}</h3><h4>{item.organization}</h4><p>{item.description}</p></div>
           </article>
         ))}
         {tab === 'Awards' && awards.map((item) => (
-          <article className="award-card" key={item.title}><div className="award-logo"><img src={item.logo} alt="Penn State logo" /></div><div><span>{item.date} · {item.amount}</span><h3>{item.title}</h3><h4>{item.issuer}</h4><p>{item.description}</p></div></article>
+          <article className="award-card" key={item.title}><div className="award-logo" data-logo-treatment={item.logoTreatment}><img src={item.logo} alt="Penn State logo" /></div><div><span>{item.date} · {item.amount}</span><h3>{item.title}</h3><h4>{item.issuer}</h4><p>{item.description}</p></div></article>
         ))}
         {tab === 'Certifications' && (
           <div className="cert-grid">
             {certifications.map((item, index) => (
               <article className={`cert-card ${index === 0 ? 'featured' : ''}`} key={item.title}>
-                <div className="cert-logo"><img src={item.logo} alt={`${item.issuer} logo`} /></div>
+                <div className="cert-logo" data-logo-treatment={item.logoTreatment ?? 'mark'}><img src={item.logo} alt={`${item.issuer} logo`} /></div>
                 <div><span>{item.date}</span><h3>{item.title}</h3><h4>{item.issuer}</h4>{item.description && <p>{item.description}</p>}</div>
               </article>
             ))}

@@ -2,6 +2,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { projects } from '../../../src/data/projects';
+import { experience as experienceItems } from '../../../src/data/experience';
 import { publishedFieldNotes } from '../../../src/data/fieldNotes';
 import { portfolioAppById } from '../../../src/data/portfolioApps';
 import { ProjectDetailWindow, AboutWindow, ExperienceWindow } from '../../../src/components/PortfolioContent';
@@ -41,6 +42,37 @@ describe('shared mobile content', () => {
     expect(experience).toContain('Scholar');
     expect(experience).toContain('Leadership');
     expect(experience).toContain('Certifications');
+  });
+
+  it('renders the same Experience component on phone, with every shared role in source order', () => {
+    const phone = renderToStaticMarkup(createElement(MobileAppHost, { appId: 'experience', route: resolvePortfolioRoute('/'), onHome: noop, onNavigate: noop, onOpenApp: noop, isActive: true }));
+    const shared = renderToStaticMarkup(createElement(ExperienceWindow));
+    // React may prepend image preload links; compare the actual shared interior.
+    expect(phone).toContain(shared.slice(shared.indexOf('<div class="experience-shell">')));
+    let previousTitle = -1;
+    for (const item of experienceItems) {
+      const title = phone.indexOf(`<h3>${escaped(item.role)}</h3>`);
+      expect(title).toBeGreaterThan(previousTitle);
+      previousTitle = title;
+      for (const text of [item.organization, item.dates, item.description, ...item.bullets]) expect(phone).toContain(escaped(text));
+      expect(phone).toContain(`src="${item.logo}" alt="" data-logo-treatment="${item.logoTreatment ?? 'mark'}"`);
+    }
+    expect(phone).toContain('Learning Assistant — AI 100');
+    expect(phone).toContain('September 2026 – Present');
+  });
+
+  it('keeps phone Experience section controls labelled and their initial selection accessible', () => {
+    const phone = renderToStaticMarkup(createElement(MobileAppHost, { appId: 'experience', route: resolvePortfolioRoute('/'), onHome: noop, onNavigate: noop, onOpenApp: noop, isActive: true }));
+    expect(phone).toContain('aria-label="Experience sections"');
+    const controls = [...phone.matchAll(/<button type="button" aria-pressed="(true|false)"[^>]*>([^<]+)<\/button>/g)];
+    expect(controls.map(([, pressed, label]) => ({ label, pressed }))).toEqual([
+      { label: 'Experience', pressed: 'true' },
+      { label: 'Leadership', pressed: 'false' },
+      { label: 'Awards', pressed: 'false' },
+      { label: 'Certifications', pressed: 'false' }
+    ]);
+    expect(phone).toContain('aria-label="Experience navigation"');
+    expect(phone).toContain('‹ Home');
   });
 
   it('renders complete notes and AI disclosures with unique mobile control IDs', () => {

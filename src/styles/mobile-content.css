@@ -41,15 +41,54 @@
 .mobile-content-body .about-gallery { display: flex; min-width: 0; order: 0; }
 .mobile-content-body .about-main-photo { max-height: 390px; }
 .mobile-content-body .experience-shell { min-height: 0; }
-.mobile-content-body .tab-bar { overflow-x: auto; }
-.mobile-content-body .tab-bar button { min-height: 44px; flex-shrink: 0; }
-.mobile-content-body .experience-scroll { padding: 16px; }
-.mobile-content-body .experience-card { grid-template-columns: 45px minmax(0, 1fr); gap: 12px; padding: 14px; }
-.mobile-content-body .experience-card img { width: 45px; height: 45px; }
-.mobile-content-body .leadership-card,
-.mobile-content-body .award-card { grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 18px; }
-.mobile-content-body .award-logo { width: 105px; }
-.mobile-content-body .cert-grid { grid-template-columns: minmax(0, 1fr); }
+/* Phone Experience only: shared content/mark-fill metadata, iOS-sized surfaces. */
+.mobile-content-body .experience-shell .tab-bar {
+  min-width: 0;
+  overflow-x: auto;
+  margin: 8px 16px 0;
+  padding: 3px;
+  gap: 2px;
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 12px;
+  background: #1c1c1e;
+}
+.mobile-content-body .experience-shell .tab-bar button {
+  min-height: 44px;
+  flex: 1 0 auto;
+  padding: 0 7px;
+  border-radius: 8px;
+  color: #b6b6bd;
+  font-size: 13px;
+  font-weight: 500;
+}
+.mobile-content-body .experience-shell .tab-bar button.active { background: #3a3a3c; color: #f5f5f7; }
+.mobile-content-body .experience-shell .tab-bar button:focus:not(:focus-visible) { outline: none; }
+.mobile-content-body .experience-shell .tab-bar button:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
+.mobile-content-body .experience-shell .experience-scroll { padding: 16px; }
+.mobile-content-body .experience-shell :is(.experience-card, .simple-card, .award-card, .cert-card) {
+  min-width: 0;
+  border-color: rgba(255,255,255,.08);
+  border-radius: 16px;
+  background: #1c1c1e;
+  box-shadow: none;
+}
+.mobile-content-body .experience-shell :is(.experience-card, .cert-card).featured { border-color: rgba(255,255,255,.14); background: #242426; }
+.mobile-content-body .experience-shell :is(.experience-card, .cert-card) { grid-template-columns: 48px minmax(0, 1fr); gap: 12px; padding: 14px; }
+.mobile-content-body .experience-shell .experience-card > img { width: 48px; height: 48px; padding: 4px; }
+.mobile-content-body .experience-shell :is(.leadership-card, .award-card) { grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 18px; }
+.mobile-content-body .experience-shell .section-logo { width: 64px; height: 64px; padding: 4px; }
+.mobile-content-body .experience-shell .award-logo { width: 64px; height: 64px; min-height: 0; padding: 4px; }
+.mobile-content-body .experience-shell .award-logo img { width: 100%; height: 100%; max-width: 100%; max-height: 100%; }
+.mobile-content-body .experience-shell .cert-grid { grid-template-columns: minmax(0, 1fr); }
+.mobile-content-body .experience-shell .cert-logo { width: 48px; height: 48px; padding: 3px; background: white; }
+.mobile-content-body .experience-shell img[data-logo-treatment='fill'],
+.mobile-content-body .experience-shell :is(.cert-logo, .award-logo)[data-logo-treatment='fill'] { padding: 0; background: #1c1c1e; overflow: hidden; }
+.mobile-content-body .experience-shell img[data-logo-treatment='fill'],
+.mobile-content-body .experience-shell [data-logo-treatment='fill'] > img { object-fit: cover; }
+.mobile-content-body .experience-shell :is(.experience-date, .simple-card span, .award-card span, .cert-card span) { color: #a1a1aa; font-size: 12px; }
+.mobile-content-body .experience-shell :is(.experience-card, .simple-card, .award-card) h3 { font-size: 17px; line-height: 1.3; }
+.mobile-content-body .experience-shell :is(.experience-card, .simple-card, .award-card, .cert-card) h4 { line-height: 1.4; }
+.mobile-content-body .experience-shell :is(.experience-card, .simple-card, .award-card, .cert-card) :is(p, li) { font-size: 14px; }
 .mobile-content-body .field-notes-shell { grid-template-columns: minmax(0, 1fr); }
 .mobile-content-body .field-notes-toolbar { min-height: 48px; }
 .mobile-content-body .field-note-reader article { padding: 20px 20px 32px; }

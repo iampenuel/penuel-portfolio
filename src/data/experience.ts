@@ -1,3 +1,5 @@
+export type LogoTreatment = 'mark' | 'fill';
+
 export type ExperienceItem = {
   id: string;
   organization: string;
@@ -6,10 +8,36 @@ export type ExperienceItem = {
   description: string;
   bullets: string[];
   logo?: string;
+  logoTreatment?: LogoTreatment;
   emphasis?: 'featured' | 'standard';
 };
 
 export const experience: ExperienceItem[] = [
+  {
+    id: 'ai-100-la',
+    organization: 'Penn State Harrisburg',
+    role: 'Learning Assistant — AI 100',
+    dates: 'September 2026 – Present',
+    description: 'Support students in AI 100 through office hours, concept clarification, assignment feedback, and classroom learning support.',
+    bullets: [
+      'Hold weekly office hours to help students work through foundational AI concepts and course material.',
+      'Provide assignment feedback and clarify concepts when students are unsure where to begin.',
+      'Support the instructional team in creating an approachable, student-centered learning environment.'
+    ],
+    logo: '/assets/logos/penn-state.png'
+  },
+  {
+    id: 'penn-state-cte',
+    organization: 'Penn State Harrisburg Center for Teaching Excellence',
+    role: 'Student Media Production Assistant',
+    dates: 'October 2024 – Present',
+    description: 'Produce and edit accessible educational media for faculty, courses, and learning initiatives.',
+    bullets: [
+      'Support filming, post-production, captioning, audio descriptions, media organization, and quality review.',
+      'Use Adobe Premiere Pro while balancing technical execution, accessibility, clarity, and audience needs.'
+    ],
+    logo: '/assets/logos/penn-state.png'
+  },
   {
     id: 'ibm',
     organization: 'IBM AI Experiential Learning Lab — Healthcare Track',
@@ -39,25 +67,14 @@ export const experience: ExperienceItem[] = [
     emphasis: 'featured'
   },
   {
-    id: 'penn-state-cte',
-    organization: 'Penn State Harrisburg Center for Teaching Excellence',
-    role: 'Student Media Production Assistant',
-    dates: 'October 2024 – Present',
-    description: 'Produce and edit accessible educational media for faculty, courses, and learning initiatives.',
-    bullets: [
-      'Support filming, post-production, captioning, audio descriptions, media organization, and quality review.',
-      'Use Adobe Premiere Pro while balancing technical execution, accessibility, clarity, and audience needs.'
-    ],
-    logo: '/assets/logos/penn-state.png'
-  },
-  {
     id: 'aws-scholar',
     organization: 'Amazon Web Services',
     role: 'AWS AI/ML Scholar',
     dates: 'June 2025 – August 2025',
     description: 'Completed structured learning in machine-learning workflows, model development, evaluation, and responsible AI.',
     bullets: ['Applied these foundations across later healthcare-AI, biosignal, medical-imaging, and full-stack AI projects.'],
-    logo: '/assets/logos/aws.png'
+    logo: '/assets/logos/aws.png',
+    logoTreatment: 'fill'
   },
   {
     id: 'adobe-ambassador',
@@ -79,6 +96,7 @@ export const leadership = [
     role: 'Bible Study Leader and Outreach Team Lead',
     dates: 'March 2024 – Present',
     logo: '/assets/logos/intervarsity.png',
+    logoTreatment: 'mark' as LogoTreatment,
     description:
       'Lead Bible-study discussions, coordinate outreach, welcome new students, and support a faith-centered community built around belonging, reflection, and service.'
   }
@@ -91,6 +109,7 @@ export const awards = [
     date: 'May 2026',
     amount: '$1,500',
     logo: '/assets/logos/penn-state.png',
+    logoTreatment: 'mark' as LogoTreatment,
     description:
       'Awarded in recognition of health-focused AI work and used to support neonatal brain MRI developmental-age classification research using transfer learning and Grad-CAM.'
   }
@@ -126,7 +145,8 @@ export const certifications = [
     title: 'AWS AI Practitioner',
     issuer: 'Udacity',
     date: 'May 2026',
-    logo: '/assets/logos/udacity.png'
+    logo: '/assets/logos/udacity.png',
+    logoTreatment: 'fill' as LogoTreatment
   },
   {
     title: 'The Rise of Multiagent Systems',
