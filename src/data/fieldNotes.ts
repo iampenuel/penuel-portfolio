@@ -13,6 +13,24 @@ export type FieldNote = {
 
 export const fieldNotes: FieldNote[] = [
   {
+    slug: 'week-04',
+    week: 'Week 04',
+    title: 'A Different Voice in the Room',
+    date: 'September 14–20, 2026',
+    pinnedThought: 'A new voice can change the way you pay attention.',
+    paragraphs: [
+      'Week 4 was an interesting adjustment because we had Heather Tidwell come into the class as our professor. Even though it was still the same course, the atmosphere felt different almost immediately. She has a lot of energy, but at the same time she comes across as very professional. That combination stood out to me, especially because I had already started getting used to the rhythm and teaching style we had before.',
+      'It made me realize how much the person teaching something affects the way you experience the material. The information can be similar, but a different personality, pace, or way of explaining something can make you pay attention differently. With a new professor, I could not just rely on the routine I had already built. I had to listen again, understand how she communicates, and adjust to a different classroom dynamic.',
+      'I actually think that adjustment was useful. It is easy to get comfortable once you understand how a class normally works. A change forces you to become more intentional again. Heather\'s energy made the class feel different, while the professionalism was still there, so it was not a matter of one style being better than another. It was more about learning how to adapt to another way of approaching the same course.',
+      'That also connects to something I keep coming back to in human-centered design: different people experience the same thing differently. There is rarely one perfect way to communicate an idea to everyone. The explanation that makes immediate sense to one person might not be the explanation that works for someone else. Hearing ideas through different voices can reveal things you may not have noticed before.',
+      'My biggest takeaway from Week 4 was probably the importance of being adaptable. Whether I am learning from a professor, working on a team, or eventually building AI systems for other people, I cannot expect every environment or person to work the way I am already comfortable with. Sometimes the change itself makes you more attentive. A new voice can change the way you pay attention.'
+    ],
+    aiTool: 'ChatGPT',
+    aiUseNote: 'I used ChatGPT to help organize my memory of the week into a concise reflection and polish the final wording. The experience of adjusting to Heather Tidwell’s teaching style, my impressions of that change, and the takeaways are my own; AI helped with structure and clarity.',
+    aiPrompt: 'Using only the ideas and experiences I provide, help me organize my Week 4 reflection into a concise 300–500 word post. Focus on Heather Tidwell coming into the class, the adjustment to a different professor, and my impression that her teaching presence was both energetic and professional. Explore what the change made me notice about adaptability, communication, different teaching styles, and how different people can experience the same information differently. Keep my voice natural and grounded. Do not invent lecture topics, administrative reasons for the professor change, quotes, student reactions, or personal details about Heather or her family. Make sure the reflection addresses a key learning moment, personal connection, adjustment/growth, and AI use without making the week sound more dramatic than it was.',
+    published: true
+  },
+  {
     slug: 'week-03',
     week: 'Week 03',
     title: 'More Than the Interface',
