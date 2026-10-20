@@ -391,6 +391,9 @@ a { color: inherit; }
 .leadership-card { display: grid; grid-template-columns: 86px 1fr; gap: 20px; align-items: center; }
 .section-logo { width: 86px; height: 86px; padding: 8px; object-fit: contain; border-radius: 15px; background: white; }
 .award-card { display: grid; grid-template-columns: 110px 1fr; gap: 20px; }
+.award-card + .award-card { margin-top: 14px; }
+.award-card > div { min-width: 0; }
+.award-card .award-photo { display: block; width: min(100%, 320px); height: auto; margin-top: 16px; border-radius: 10px; }
 .award-logo { display: grid; place-items: center; min-height: 90px; padding: 12px; border-radius: 15px; background: white; }
 .award-logo img { display: block; max-width: 84px; max-height: 74px; object-fit: contain; }
 .cert-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(285px, 1fr)); gap: 12px; }

@@ -102,7 +102,35 @@ export const leadership = [
   }
 ];
 
-export const awards = [
+export type Award = {
+  title: string;
+  issuer: string;
+  date: string;
+  amount?: string;
+  placement?: string;
+  logo: string;
+  logoTreatment: LogoTreatment;
+  description: string;
+  photo?: { src: string; alt: string; width: number; height: number };
+};
+
+export const awards: Award[] = [
+  {
+    title: 'ICDS Symposium 2026 — Third Place',
+    issuer: 'Penn State Institute for Computational and Data Sciences',
+    date: 'October 14, 2026',
+    placement: 'Third Place',
+    logo: '/assets/logos/penn-state.png',
+    logoTreatment: 'mark',
+    description:
+      'Earned third place in the student research poster competition at Penn State’s 2026 ICDS Symposium for my independent research on developmental-age classification from neonatal brain MRI using transfer learning and Grad-CAM.',
+    photo: {
+      src: '/assets/photos/icds-symposium-2026.webp',
+      alt: 'Penuel standing beside his Developmental Age Classification from Neonatal Brain MRI research poster at the 2026 ICDS Symposium.',
+      width: 960,
+      height: 1020
+    }
+  },
   {
     title: 'Ackroyd Family Healthier Days Scholarship',
     issuer: 'Penn State Harrisburg',

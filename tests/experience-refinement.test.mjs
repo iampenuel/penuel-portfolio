@@ -37,7 +37,7 @@ test('all pre-existing Experience, Leadership, Awards, and Certification facts a
     awards: '0896278abda7ff7d1b50667dee85f71ae530982fb526040120bcaff3215c367b',
     certifications: '648d44fbdb85672d1155acb055ac5b1b43c56538ca4c53c41232b74cc892088e'
   };
-  for (const [name, items] of Object.entries({ experience: experience.filter(item => item.id !== 'ai-100-la'), leadership, awards, certifications })) {
+  for (const [name, items] of Object.entries({ experience: experience.filter(item => item.id !== 'ai-100-la'), leadership, awards: awards.filter(item => item.title !== 'ICDS Symposium 2026 — Third Place'), certifications })) {
     const normalized = items.map(({ logoTreatment, ...item }) => item).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
     assert.equal(createHash('sha256').update(JSON.stringify(normalized)).digest('hex'), expected[name], name);
   }

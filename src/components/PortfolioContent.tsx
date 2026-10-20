@@ -108,7 +108,16 @@ export function ExperienceWindow() {
           </article>
         ))}
         {tab === 'Awards' && awards.map((item) => (
-          <article className="award-card" key={item.title}><div className="award-logo" data-logo-treatment={item.logoTreatment}><img src={item.logo} alt="Penn State logo" /></div><div><span>{item.date} · {item.amount}</span><h3>{item.title}</h3><h4>{item.issuer}</h4><p>{item.description}</p></div></article>
+          <article className="award-card" key={item.title}>
+            <div className="award-logo" data-logo-treatment={item.logoTreatment}><img src={item.logo} alt="Penn State logo" /></div>
+            <div>
+              <span>{item.date}{(item.placement ?? item.amount) && ` · ${item.placement ?? item.amount}`}</span>
+              <h3>{item.title}</h3>
+              <h4>{item.issuer}</h4>
+              <p>{item.description}</p>
+              {item.photo && <img className="award-photo" src={item.photo.src} alt={item.photo.alt} width={item.photo.width} height={item.photo.height} loading="lazy" decoding="async" />}
+            </div>
+          </article>
         ))}
         {tab === 'Certifications' && (
           <div className="cert-grid">
