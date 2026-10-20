@@ -13,6 +13,26 @@ export type FieldNote = {
 
 export const fieldNotes: FieldNote[] = [
   {
+    slug: 'weeks-05-08',
+    week: 'Weeks 05–08',
+    title: 'From an Idea to a Team Effort',
+    date: 'September 21–October 18, 2026',
+    pinnedThought: 'A good project needs more than a strong idea. It needs people who believe in it enough to build it together.',
+    paragraphs: [
+      'Over the past few weeks, AI 285 has become increasingly hands-on for me. My group and I have been developing Our Ground, our project for the Nittany AI Challenge. It\'s a platform we\'re envisioning to help connect people seeking food and healthcare support with organizations and individuals who can provide that support.',
+      'We presented our first proposal, and since then, we\'ve continued meeting, discussing ideas, and figuring out how to move the project forward. What started as a concept is gradually becoming something we have to think through more seriously. There\'s a difference between explaining what you want to build and actually deciding how it should work for the people who will use it.',
+      'One of the things I\'ve appreciated most is my team. I\'m currently leading the group, and I\'m genuinely grateful to be working with such talented people. Everyone brings something valuable to the table, and I\'ve enjoyed the conversations and the process of developing our ideas together.',
+      'I think that\'s one of the things this experience is teaching me about leadership. It\'s not just about having an idea or being the person coordinating the work. It\'s also about recognizing the strengths of the people around you, listening to different perspectives, and making sure we\'re moving forward together. A project like this shouldn\'t feel like one person\'s vision with everyone else simply following along.',
+      'We\'ve been trying to stay ahead by meeting consistently and making progress beyond what happens during class. We still have a lot to figure out, especially as we move from our proposal toward an actual product. But I\'ve enjoyed seeing the project develop and having the opportunity to contribute to that process.',
+      'Looking back at my earlier reflections about human-centered design, I can see how those ideas connect to what we\'re doing now. We\'re not just thinking about technology or an interface. We\'re thinking about real people, their needs, and how different groups might interact through one platform.',
+      'I\'m looking forward to seeing where we take Our Ground. More than anything, I\'m grateful for the people I get to build it with.'
+    ],
+    aiTool: 'ChatGPT',
+    aiUseNote: 'I used ChatGPT to help organize my experiences developing Our Ground, leading our team, and preparing our first project proposal into a coherent reflection. The events, ideas, impressions, and personal takeaways are my own; AI helped with structure and wording.',
+    aiPrompt: 'Summary of the writing request: Organize a reflection from my firsthand account of leading the Our Ground team, presenting our first proposal for the Nittany AI Challenge, and regularly meeting with talented teammates. Preserve my natural voice and focus on leadership, teamwork, human-centered development, and gratitude. Do not invent experiences or imply that the project is already completed or deployed.',
+    published: true
+  },
+  {
     slug: 'week-04',
     week: 'Week 04',
     title: 'Different Voices, Lasting Impact',

@@ -227,7 +227,8 @@ export const projects: Project[] = [
       'Perceptual hashing and group-aware splitting reduced duplicate and near-duplicate leakage risk',
       'Macro-F1 emphasized across 14 age classes',
       'Grad-CAM visualizations support inspection, not causal proof',
-      'Reproducible evaluation artifacts and explicit limitations'
+      'Reproducible evaluation artifacts and explicit limitations',
+      'Earned third place in the student research poster competition at Penn State’s 2026 ICDS Symposium on October 14, 2026, for this independent undergraduate research'
     ],
     metrics: ['EfficientNet-B0 macro-F1 ≈ 0.8775', 'Accuracy ≈ 0.8774', 'ResNet-18 baseline macro-F1 ≈ 0.8162'],
     technologies: ['Python', 'PyTorch', 'Torchvision', 'EfficientNet-B0', 'ResNet-18', 'Scikit-learn', 'Pillow', 'Perceptual hashing', 'Grad-CAM', 'Streamlit'],
